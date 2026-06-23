@@ -1,19 +1,30 @@
 package com.taskflow.backend.category;
 
+import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.Optional;
 
 /**
  * Spring Data MongoDB repository for {@link Category} documents.
  *
- * <p>Provides the standard CRUD contract over the {@code categories} collection.
- * No custom queries are defined yet.
- *
- * <p>TODO (future phases): add user-scoped queries — e.g. find all by
- * {@code userId}, find by id and {@code userId}, existence check by
- * {@code (userId, name)} for duplicate detection, and delete-by-userId for the
- * account-deletion cascade.
+ * <p>All queries are scoped by {@code userId} so a caller can only ever touch
+ * their own categories.
  */
 @Repository
 public interface CategoryRepository extends MongoRepository<Category, String> {
+
+    /** All of a user's categories, ordered. */
+    List<Category> findByUserId(String userId, Sort sort);
+
+    /** A single category by id, but only if owned by the given user. */
+    Optional<Category> findByIdAndUserId(String id, String userId);
+
+    /** Whether the user already has a category with this name. */
+    boolean existsByUserIdAndName(String userId, String name);
+
+    /** Whether the user has a <em>different</em> category with this name (rename guard). */
+    boolean existsByUserIdAndNameAndIdNot(String userId, String name, String id);
 }

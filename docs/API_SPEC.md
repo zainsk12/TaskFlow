@@ -7,11 +7,12 @@
 **Content type:** `application/json`
 **Last updated:** 2026-06-23
 
-> **Implementation status.** §1 (conventions), §2 (Authentication), and §3.1–§3.3
-> (profile read/update, change password) are **implemented** with stateless JWT
-> auth (HS256). §3.4 (delete account), §4 (Tasks), §5 (Categories), §6 (Dashboard),
-> and §7 (Admin) describe the target contract; their routes are registered and
-> protected, but business logic lands in later phases.
+> **Implementation status.** §1 (conventions), §2 (Authentication), §3.1–§3.3
+> (profile read/update, change password), §4 Tasks CRUD (4.1–4.4, 4.6), and §5
+> Categories (full CRUD) are **implemented** — all behind stateless JWT auth
+> (HS256), user-scoped, with filtering/pagination/sorting on task listing. Not yet
+> implemented: §4.5 (`PATCH /tasks/{id}/status` — status can be changed via the
+> §4.4 `PUT` for now), §3.4 (delete account), §6 (Dashboard), and §7 (Admin).
 
 ---
 
@@ -349,9 +350,11 @@ The `Task` response object:
 | `status` | `TODO` | Filter by status. |
 | `priority` | `HIGH` | Filter by priority. |
 | `categoryId` | `665f...c10` | Filter by category. |
-| `search` | `assignment` | Keyword search (title + description). |
-| `overdue` | `true` | Only overdue tasks. |
-| `page`, `size`, `sort` | `0`, `20`, `dueDate,asc` | Pagination/sorting. |
+| `search` | `assignment` | Case-insensitive keyword search (title + description). |
+| `overdue` | `true` | Only overdue tasks (`dueDate < now && status != DONE`). |
+| `dueAfter` | `2026-06-01T00:00:00Z` | Only tasks with `dueDate >=` this instant. |
+| `dueBefore` | `2026-06-30T00:00:00Z` | Only tasks with `dueDate <=` this instant. |
+| `page`, `size`, `sort` | `0`, `20`, `dueDate,asc` | Pagination/sorting (default size 20, max 100). |
 
 **Response body — `200 OK`** — a paged wrapper of `Task` objects (see §1.4).
 

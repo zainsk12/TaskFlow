@@ -8,6 +8,7 @@ import lombok.Setter;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
@@ -22,14 +23,11 @@ import java.time.Instant;
  * <p>{@code taskCount} (exposed in the API) is intentionally <em>not</em> stored
  * — it is computed at read time.
  *
- * <p>TODO (future phases):
- * <ul>
- *   <li>Add the unique compound index {@code (userId, name)} and a {@code userId} index.</li>
- *   <li>Validate {@code color} against {@code ^#([0-9A-Fa-f]{6})$} at the DTO boundary.</li>
- *   <li>On delete, null out {@code categoryId} on the user's tasks (handled in the service layer).</li>
- * </ul>
+ * <p>The unique compound index {@code (userId, name)} enforces one category name
+ * per user at the database level (defence in depth alongside the service check).
  */
 @Document(collection = "categories")
+@CompoundIndex(name = "uniq_user_name", def = "{'userId': 1, 'name': 1}", unique = true)
 @Getter
 @Setter
 @Builder

@@ -11,6 +11,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
@@ -47,6 +48,25 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InvalidTokenException.class)
     public ResponseEntity<ApiError> handleInvalidToken(InvalidTokenException ex, HttpServletRequest request) {
         return build(HttpStatus.UNAUTHORIZED, ex.getMessage(), request, null);
+    }
+
+    /** Resource missing or not owned by the caller → {@code 404 Not Found}. */
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<ApiError> handleNotFound(ResourceNotFoundException ex, HttpServletRequest request) {
+        return build(HttpStatus.NOT_FOUND, ex.getMessage(), request, null);
+    }
+
+    /** Uniqueness violation (e.g. duplicate category name) → {@code 409 Conflict}. */
+    @ExceptionHandler(DuplicateResourceException.class)
+    public ResponseEntity<ApiError> handleDuplicateResource(DuplicateResourceException ex, HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), request, null);
+    }
+
+    /** Unconvertible request parameter (e.g. an unknown enum filter value) → {@code 400}. */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiError> handleTypeMismatch(MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
+        String message = "Invalid value '%s' for parameter '%s'".formatted(ex.getValue(), ex.getName());
+        return build(HttpStatus.BAD_REQUEST, message, request, null);
     }
 
     /** {@code @Valid} request-body failures → {@code 400 Bad Request} with field details. */

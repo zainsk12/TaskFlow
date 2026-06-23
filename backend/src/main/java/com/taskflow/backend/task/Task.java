@@ -10,6 +10,8 @@ import lombok.Setter;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
+import org.springframework.data.mongodb.core.index.CompoundIndexes;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
@@ -25,15 +27,16 @@ import java.util.List;
  * <p>{@code isOverdue} is intentionally <em>not</em> stored — it is computed at
  * read time as {@code dueDate < now && status != DONE}.
  *
- * <p>TODO (future phases):
- * <ul>
- *   <li>Add user-scoped compound indexes (userId+status, userId+dueDate,
- *       userId+priority, userId+categoryId) and a title/description text index.</li>
- *   <li>Default {@code status} to TODO and {@code priority} to MEDIUM in the service layer.</li>
- *   <li>Manage {@code completedAt} on status transitions in the service layer.</li>
- * </ul>
+ * <p>Every index is prefixed with {@code userId} because every query is scoped to
+ * the authenticated user (see {@code docs/DATABASE.md} §4.2).
  */
 @Document(collection = "tasks")
+@CompoundIndexes({
+        @CompoundIndex(name = "user_status", def = "{'userId': 1, 'status': 1}"),
+        @CompoundIndex(name = "user_dueDate", def = "{'userId': 1, 'dueDate': 1}"),
+        @CompoundIndex(name = "user_priority", def = "{'userId': 1, 'priority': 1}"),
+        @CompoundIndex(name = "user_category", def = "{'userId': 1, 'categoryId': 1}")
+})
 @Getter
 @Setter
 @Builder
