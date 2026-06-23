@@ -1,10 +1,12 @@
 package com.taskflow.backend.user;
 
+import com.taskflow.backend.security.SecurityUtils;
 import com.taskflow.backend.user.dto.ChangePasswordRequest;
 import com.taskflow.backend.user.dto.UpdateProfileRequest;
 import com.taskflow.backend.user.dto.UserResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -12,9 +14,8 @@ import org.springframework.web.server.ResponseStatusException;
  * Business logic for the authenticated user's own profile.
  *
  * <p>This phase implements the three "self-service" profile operations behind
- * {@code /api/v1/users/me}. All of them operate on the <em>current</em> user;
- * resolving who that is depends on the security layer, which is not implemented
- * yet — see {@link #currentUserId()}.
+ * {@code /api/v1/users/me}. All of them operate on the <em>current</em> user,
+ * resolved from the JWT security context — see {@link #currentUserId()}.
  *
  * <p>Error mapping uses {@link ResponseStatusException} for now. A later phase
  * will introduce dedicated domain exceptions ({@code NotFoundException},
@@ -35,6 +36,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final UserMapper userMapper;
+    private final PasswordEncoder passwordEncoder;
 
     /**
      * Returns the current user's profile.
@@ -91,8 +93,6 @@ public class UserService {
     }
 
     // ------------------------------------------------------------------
-    // Placeholders pending the security/auth phase.
-    // ------------------------------------------------------------------
 
     /**
      * Loads the current user document, translating "not found" into a 404.
@@ -103,36 +103,21 @@ public class UserService {
     }
 
     /**
-     * Resolves the id of the authenticated principal.
-     *
-     * <p>TODO(auth): read the user id from the {@code SecurityContext} (the JWT
-     * {@code sub} claim) once {@code JwtAuthFilter}/{@code SecurityConfig} exist.
-     * Until then there is no authentication, so this cannot return a real id.
+     * Resolves the id of the authenticated principal from the JWT
+     * {@code SecurityContext} (the {@code sub} claim, stored by
+     * {@code JwtAuthenticationFilter}).
      */
     private String currentUserId() {
-        throw new UnsupportedOperationException(
-                "Authentication is not implemented yet: the current user id is resolved from the "
-                        + "JWT SecurityContext in a later phase.");
+        return SecurityUtils.currentUserId();
     }
 
-    /**
-     * Verifies a raw password against a stored hash.
-     *
-     * <p>TODO(auth): delegate to an injected {@code PasswordEncoder} (BCrypt)
-     * defined in {@code SecurityConfig}. No password handling exists yet.
-     */
+    /** Verifies a raw password against a stored BCrypt hash. */
     private boolean passwordMatches(String rawPassword, String passwordHash) {
-        throw new UnsupportedOperationException(
-                "Password verification requires a PasswordEncoder, added in the security phase.");
+        return passwordEncoder.matches(rawPassword, passwordHash);
     }
 
-    /**
-     * Hashes a raw password for storage.
-     *
-     * <p>TODO(auth): delegate to the injected {@code PasswordEncoder} (BCrypt).
-     */
+    /** Hashes a raw password for storage with BCrypt. */
     private String hashPassword(String rawPassword) {
-        throw new UnsupportedOperationException(
-                "Password hashing requires a PasswordEncoder, added in the security phase.");
+        return passwordEncoder.encode(rawPassword);
     }
 }
