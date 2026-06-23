@@ -1,11 +1,17 @@
 # API Specification — TaskFlow
 
 **Project:** TaskFlow — Smart Task & Workflow Management Platform
-**Document version:** 1.0
+**Document version:** 1.1
 **Base URL (prod):** `https://<railway-app>.up.railway.app`
 **API base path:** `/api/v1`
 **Content type:** `application/json`
-**Last updated:** 2026-06-22
+**Last updated:** 2026-06-23
+
+> **Implementation status.** §1 (conventions), §2 (Authentication), and §3.1–§3.3
+> (profile read/update, change password) are **implemented** with stateless JWT
+> auth (HS256). §3.4 (delete account), §4 (Tasks), §5 (Categories), §6 (Dashboard),
+> and §7 (Admin) describe the target contract; their routes are registered and
+> protected, but business logic lands in later phases.
 
 ---
 
@@ -19,7 +25,16 @@ Protected endpoints require a bearer token:
 Authorization: Bearer <accessToken>
 ```
 
-The token is a JWT issued by `/auth/login` or `/auth/refresh`. Its subject (`sub`) is the user's id; all data access is scoped to that user server-side.
+The token is a JWT (signed **HS256**) issued by `/auth/register`, `/auth/login`, or `/auth/refresh`. Claims: `sub` = user id, `email`, `role`, `typ` (`access` or `refresh`), plus `iat`/`exp`. All data access is scoped to the `sub` user server-side.
+
+Two token kinds are issued:
+
+| Token | Lifetime (default) | Used for |
+|-------|--------------------|----------|
+| `accessToken` | 15 min (`expiresIn` = 900 s) | Sent on every request as `Authorization: Bearer`. |
+| `refreshToken` | 7 days | Exchanged at `/auth/refresh` for a new access token. Never sent as a Bearer credential. |
+
+Only an **access** token authenticates a request; presenting a refresh token as a Bearer credential is rejected. A missing, malformed, expired, or wrong-kind token on a protected endpoint returns `401` with the standard error body (§1.3). Token lifetimes are configurable (`jwt.access-token-expiration`, `jwt.refresh-token-expiration`).
 
 ### 1.2 Standard status codes
 
@@ -97,16 +112,26 @@ Paged responses are wrapped:
 }
 ```
 
-**Response body — `201 Created`**
+**Response body — `201 Created`** — registration auto-logs-in, returning the same token pair + profile as login (§2.2):
 ```json
 {
-  "id": "665f1a2b3c4d5e6f7a8b9c01",
-  "name": "Ananya Sharma",
-  "email": "ananya@example.com",
-  "role": "USER",
-  "createdAt": "2026-06-01T08:30:00Z"
+  "accessToken": "eyJhbGciOiJIUzI1NiJ9...",
+  "refreshToken": "eyJhbGciOiJIUzI1NiJ9...",
+  "tokenType": "Bearer",
+  "expiresIn": 900,
+  "user": {
+    "id": "665f1a2b3c4d5e6f7a8b9c01",
+    "name": "Ananya Sharma",
+    "email": "ananya@example.com",
+    "role": "USER",
+    "avatarUrl": null,
+    "timezone": "Asia/Kolkata",
+    "createdAt": "2026-06-01T08:30:00Z",
+    "updatedAt": "2026-06-01T08:30:00Z"
+  }
 }
 ```
+> `password` is required, 8–72 chars; `name` 2–60 chars. The email is stored lowercased/trimmed.
 
 **Status codes:** `201` created · `400` validation error · `409` email already registered.
 
@@ -131,18 +156,23 @@ Paged responses are wrapped:
 **Response body — `200 OK`**
 ```json
 {
-  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6...",
-  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6...",
+  "accessToken": "eyJhbGciOiJIUzI1NiJ9...",
+  "refreshToken": "eyJhbGciOiJIUzI1NiJ9...",
   "tokenType": "Bearer",
   "expiresIn": 900,
   "user": {
     "id": "665f1a2b3c4d5e6f7a8b9c01",
     "name": "Ananya Sharma",
     "email": "ananya@example.com",
-    "role": "USER"
+    "role": "USER",
+    "avatarUrl": null,
+    "timezone": "Asia/Kolkata",
+    "createdAt": "2026-06-01T08:30:00Z",
+    "updatedAt": "2026-06-01T08:30:00Z"
   }
 }
 ```
+> `tokenType` is always `"Bearer"`; `expiresIn` is the access-token lifetime in seconds. `user` is the full profile object (same shape as §3.1).
 
 **Status codes:** `200` success · `400` validation error · `401` invalid credentials.
 
@@ -164,13 +194,14 @@ Paged responses are wrapped:
 **Response body — `200 OK`**
 ```json
 {
-  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6...",
+  "accessToken": "eyJhbGciOiJIUzI1NiJ9...",
   "tokenType": "Bearer",
   "expiresIn": 900
 }
 ```
+> Returns a fresh **access** token only; the refresh token is unchanged and is reused until it expires. `refreshToken` and `user` are omitted from this response (null fields are not serialised). The supplied token must be a valid, non-expired **refresh**-type token — an access token here is rejected with `401`.
 
-**Status codes:** `200` success · `401` invalid/expired refresh token.
+**Status codes:** `200` success · `400` `refreshToken` missing/blank · `401` invalid/expired/wrong-kind refresh token.
 
 ---
 
@@ -180,16 +211,18 @@ Paged responses are wrapped:
 |---|---|
 | **Method** | `POST` |
 | **Route** | `/api/v1/auth/logout` |
-| **Auth** | Required |
+| **Auth** | None (public route) |
 
 **Request body**
 ```json
-{ "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6..." }
+{ "refreshToken": "eyJhbGciOiJIUzI1NiJ9..." }
 ```
 
-**Response — `204 No Content`** (no body). Server discards/denylists the refresh token; client clears stored tokens.
+**Response — `204 No Content`** (no body).
 
-**Status codes:** `204` success · `401` not authenticated.
+> **Current behaviour:** logout is a **stateless client-side discard** — the server accepts the request and returns `204`; the client clears its stored tokens. Because tokens are stateless, the access token remains valid until it expires. A server-side refresh-token **denylist** (to hard-revoke a session immediately) is a planned enhancement. The route is public (under `/auth/**`); `refreshToken` is still required in the body for forward compatibility.
+
+**Status codes:** `204` success · `400` `refreshToken` missing/blank.
 
 ---
 
@@ -645,7 +678,7 @@ Used by Railway/Vercel and uptime monitors.
 | POST | `/api/v1/auth/register` | None |
 | POST | `/api/v1/auth/login` | None |
 | POST | `/api/v1/auth/refresh` | None |
-| POST | `/api/v1/auth/logout` | Required |
+| POST | `/api/v1/auth/logout` | None (public) |
 | GET | `/api/v1/users/me` | Required |
 | PUT | `/api/v1/users/me` | Required |
 | PATCH | `/api/v1/users/me/password` | Required |

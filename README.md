@@ -10,7 +10,7 @@ Clean, modern task management with workflow tracking and productivity insights �
 [![Vite](https://img.shields.io/badge/Vite-5-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
 [![Java](https://img.shields.io/badge/Java-21-007396?logo=openjdk&logoColor=white)](https://openjdk.org/)
-[![Spring Boot](https://img.shields.io/badge/Spring_Boot-3-6DB33F?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
+[![Spring Boot](https://img.shields.io/badge/Spring_Boot-4.1-6DB33F?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
 [![MongoDB](https://img.shields.io/badge/MongoDB-7-47A248?logo=mongodb&logoColor=white)](https://www.mongodb.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](#-license)
 
@@ -50,9 +50,9 @@ This is a production-grade reference implementation demonstrating a complete mod
 | Layer | Technologies |
 |-------|--------------|
 | **Frontend** | React 18, Vite, TailwindCSS, React Router, TanStack Query, Axios |
-| **Backend** | Java 21, Spring Boot 3, Spring Web, Spring Security, JWT |
+| **Backend** | Java 21, Spring Boot 4.1, Spring Web MVC, Spring Security, JJWT |
 | **Database** | MongoDB (Spring Data MongoDB) |
-| **Auth** | JWT (access + refresh tokens), BCrypt password hashing |
+| **Auth** | Stateless JWT (HS256 access + refresh tokens), BCrypt password hashing |
 | **Deployment** | Vercel (frontend), Railway (backend), MongoDB Atlas (database) |
 | **Tooling** | GitHub, GitHub Actions (CI), Maven |
 
@@ -120,9 +120,9 @@ cd TaskFlow
 | Variable | Description | Example |
 |----------|-------------|---------|
 | `MONGODB_URI` | MongoDB connection string | `mongodb+srv://user:pass@cluster.mongodb.net/taskflow` |
-| `JWT_SECRET` | Secret used to sign JWTs (keep long & random) | `a-very-long-random-secret` |
-| `JWT_ACCESS_EXPIRATION` | Access token lifetime (ms) | `900000` |
-| `JWT_REFRESH_EXPIRATION` | Refresh token lifetime (ms) | `604800000` |
+| `JWT_SECRET` | HS256 signing secret (≥ 256 bits / 32 chars; long & random) | `a-very-long-random-secret-min-32-chars` |
+| `JWT_ACCESS_TOKEN_EXPIRATION` | Access token lifetime (duration) | `15m` |
+| `JWT_REFRESH_TOKEN_EXPIRATION` | Refresh token lifetime (duration) | `7d` |
 | `CORS_ALLOWED_ORIGINS` | Allowed frontend origin(s) | `https://taskflow.vercel.app` |
 | `SERVER_PORT` | Port the API listens on | `8080` |
 
@@ -149,7 +149,7 @@ cp .env.example .env
 
 # or build a jar and run it
 ./mvnw clean package
-java -jar target/taskflow-*.jar
+java -jar target/backend-*.jar
 ```
 
 The API will be available at **`http://localhost:8080`** (base path `/api/v1`).
@@ -185,14 +185,14 @@ npm run preview
 
 ## 📡 API Overview
 
-Base path: `/api/v1`. All non-auth endpoints require `Authorization: Bearer <token>`.
+Base path: `/api/v1`. The `/auth/**` routes are public; **all other endpoints require** `Authorization: Bearer <accessToken>`.
 
 | Method | Route | Description |
 |--------|-------|-------------|
-| `POST` | `/auth/register` | Create an account |
-| `POST` | `/auth/login` | Log in, receive tokens |
-| `POST` | `/auth/refresh` | Refresh the access token |
-| `POST` | `/auth/logout` | Invalidate refresh token |
+| `POST` | `/auth/register` | Create an account (auto-login: returns access + refresh tokens + profile) |
+| `POST` | `/auth/login` | Log in, receive access + refresh tokens + profile |
+| `POST` | `/auth/refresh` | Exchange a refresh token for a new access token |
+| `POST` | `/auth/logout` | Log out (client discards tokens; stateless — denylist planned) |
 | `GET` | `/users/me` | Get current profile |
 | `PUT` | `/users/me` | Update profile |
 | `PATCH` | `/users/me/password` | Change password |

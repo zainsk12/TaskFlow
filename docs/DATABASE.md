@@ -2,8 +2,8 @@
 
 **Project:** TaskFlow — Smart Task & Workflow Management Platform
 **Database:** MongoDB (document store)
-**Document version:** 1.0
-**Last updated:** 2026-06-22
+**Document version:** 1.1
+**Last updated:** 2026-06-23
 
 This document defines the MongoDB data model: collections, fields, relationships, indexing, validation, and example documents. The model is intentionally lean and denormalised where it helps read performance, while keeping ownership and referential intent explicit.
 
@@ -59,7 +59,7 @@ TaskFlow has three primary collections:
 | `passwordHash` | String | yes | BCrypt hash. Never returned by the API. |
 | `role` | String (enum) | yes | `USER` or `ADMIN`. Defaults to `USER`. |
 | `avatarUrl` | String | no | Optional profile image URL. |
-| `timezone` | String | no | IANA timezone (e.g. `Asia/Kolkata`). Defaults to `UTC`. |
+| `timezone` | String | no | IANA timezone (e.g. `Asia/Kolkata`). Defaults to `Asia/Kolkata` (set on the `User` document at registration). |
 | `createdAt` | Date | yes | Set on insert. |
 | `updatedAt` | Date | yes | Set on every update. |
 

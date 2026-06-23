@@ -1,8 +1,8 @@
 # Architecture — TaskFlow
 
 **Project:** TaskFlow — Smart Task & Workflow Management Platform
-**Document version:** 1.0
-**Last updated:** 2026-06-22
+**Document version:** 1.1
+**Last updated:** 2026-06-23
 
 This document describes the technical architecture of TaskFlow: how the system is decomposed, how a request flows from browser to database and back, how authentication works, and how the system is deployed.
 
@@ -75,7 +75,7 @@ UI event → React Query hook → Axios API function → backend → response ca
 
 ## 3. Backend Architecture
 
-**Stack:** Java 21, Spring Boot 3, Spring Web, Spring Security, Spring Data MongoDB, JJWT (or Nimbus) for tokens, Bean Validation (Jakarta Validation).
+**Stack:** Java 21, Spring Boot 4.1, Spring Web MVC, Spring Security, Spring Data MongoDB, JJWT 0.12.x (HS256 tokens), Bean Validation (Jakarta Validation), Lombok.
 
 ### 3.1 Layered design
 
@@ -95,23 +95,29 @@ Controller  →  Service  →  Repository  →  MongoDB
 ### 3.2 Package structure
 
 ```
-com.taskflow
-├── config/            # SecurityConfig, MongoConfig, CorsConfig, OpenApiConfig
-├── security/          # JwtService, JwtAuthFilter, UserDetails impl, AuthEntryPoint
-├── auth/              # AuthController, AuthService, register/login DTOs
-├── user/              # UserController, UserService, UserRepository, User document
-├── task/              # TaskController, TaskService, TaskRepository, Task document, DTOs
-├── category/          # CategoryController, CategoryService, CategoryRepository, Category
-├── dashboard/         # DashboardController, DashboardService (aggregations)
-├── common/            # Enums (Status, Priority, Role), exceptions, ApiError, mappers
-└── TaskFlowApplication.java
+com.taskflow.backend
+├── config/            # SecurityConfig, MongoConfig, PasswordConfig  (CorsConfig/OpenApiConfig planned)
+├── security/          # JwtService, JwtAuthenticationFilter, JwtAuthenticationEntryPoint,
+│                      #   JwtProperties, SecurityUtils
+├── auth/              # AuthController, AuthService, dto/ (Register/Login/Refresh requests, AuthResponse)
+├── user/              # UserController, UserService, UserRepository, UserMapper, User document, dto/
+├── task/              # TaskController, TaskService, TaskRepository, Task document, dto/
+├── category/          # CategoryController, CategoryService, CategoryRepository, Category, dto/
+├── dashboard/         # DashboardController, DashboardService (aggregations), dto/
+├── common/            # Enums (TaskStatus, Priority, Role), exceptions, ApiError, GlobalExceptionHandler
+└── BackendApplication.java
 ```
+
+> Authentication uses the JWT `SecurityContext` directly (the filter builds the
+> `Authentication`); there is no Spring `UserDetailsService` — its auto-config is
+> excluded in `BackendApplication`. `SecurityUtils.currentUserId()` exposes the
+> authenticated `sub` to the service layer.
 
 ### 3.3 Cross-cutting concerns
 
 - **Validation.** Jakarta Bean Validation annotations on request DTOs; enum membership and length constraints enforced before reaching the service.
-- **Error handling.** A `@RestControllerAdvice` global handler converts exceptions into a consistent `ApiError` JSON body (see `API_SPEC.md`).
-- **Security.** `SecurityConfig` defines a stateless filter chain, registers the JWT filter, and configures CORS for the Vercel origin.
+- **Error handling.** A `@RestControllerAdvice` global handler (`GlobalExceptionHandler`) converts exceptions into a consistent `ApiError` JSON body (see `API_SPEC.md`) — duplicate email → `409`, invalid credentials / invalid token → `401`, validation & malformed JSON → `400`, with a logged catch-all `500`. Unauthenticated access to protected routes is rendered as the same `ApiError` shape by `JwtAuthenticationEntryPoint`.
+- **Security.** `SecurityConfig` defines a stateless (`SessionCreationPolicy.STATELESS`) filter chain with CSRF, HTTP Basic, and form login disabled; permits `/api/v1/auth/**`, requires authentication for all other API routes; and registers `JwtAuthenticationFilter` ahead of the username/password filter. (CORS restriction to the Vercel origin is a planned `CorsConfig`.)
 - **Mapping.** DTO ↔ domain mapping via explicit mappers (or MapStruct) — no leaking of internal fields.
 
 ---
@@ -124,13 +130,14 @@ TaskFlow uses **stateless JWT authentication** with short-lived access tokens an
 
 ```
 1. Client POST /api/v1/auth/register  { name, email, password }
-2. Server validates, hashes password (BCrypt), stores user, returns 201.
+2. Server validates, hashes password (BCrypt), stores user, and immediately
+   issues a token pair (auto-login) — returns 201 with both tokens + profile.
 
 3. Client POST /api/v1/auth/login  { email, password }
 4. Server verifies credentials, then issues:
-      - accessToken  (JWT, ~15 min, claims: sub=userId, role, exp)
-      - refreshToken (JWT, ~7 days)
-5. Server returns both tokens + safe user profile.
+      - accessToken  (JWT HS256, ~15 min, claims: sub=userId, email, role, typ=access, iat, exp)
+      - refreshToken (JWT HS256, ~7 days, typ=refresh)
+5. Server returns both tokens + safe user profile (tokenType=Bearer, expiresIn=900).
 ```
 
 ### 4.2 Authenticated request
@@ -140,17 +147,17 @@ Browser                         Spring Boot
    │  GET /api/v1/tasks                │
    │  Authorization: Bearer <access>   │
    │ ─────────────────────────────────▶│
-   │                                   │ JwtAuthFilter:
-   │                                   │   1. extract token
-   │                                   │   2. validate signature + expiry
-   │                                   │   3. load principal (userId, role)
+   │                                   │ JwtAuthenticationFilter:
+   │                                   │   1. extract Bearer token
+   │                                   │   2. validate signature + expiry, require typ=access
+   │                                   │   3. build Authentication (principal=userId, ROLE_<role>)
    │                                   │   4. set SecurityContext
    │                                   │ Controller → Service (scoped by userId)
    │  200 OK  [ tasks ]                 │
    │ ◀─────────────────────────────────│
 ```
 
-If the access token is missing or invalid, the filter chain returns `401 Unauthorized` via the authentication entry point.
+If the access token is missing, malformed, expired, or not an access token, the filter leaves the context unauthenticated and the chain returns `401 Unauthorized` (as an `ApiError` body) via `JwtAuthenticationEntryPoint`.
 
 ### 4.3 Token refresh
 
@@ -165,8 +172,8 @@ If the access token is missing or invalid, the filter chain returns `401 Unautho
 ### 4.4 Token storage & hardening
 
 - Access token kept in memory (or short-lived storage); refresh token stored so a returning user stays signed in.
-- Tokens are signed (HS256 with a strong secret, or RS256 with a key pair) and never contain sensitive data beyond `userId` and `role`.
-- Logout discards client tokens; an optional server-side refresh-token denylist can revoke sessions if needed.
+- Tokens are signed **HS256** with a strong secret (`JWT_SECRET`, ≥ 256 bits) and contain no sensitive data beyond `userId`, `email`, and `role`.
+- Logout is currently a **stateless client-side discard** (server returns `204`, tokens remain valid until expiry). A server-side refresh-token denylist to hard-revoke sessions is a planned enhancement.
 
 ---
 
@@ -180,7 +187,7 @@ A worked example: **user creates a task.**
 3. Axios attaches Authorization: Bearer <accessToken>, POSTs to
    https://<api>/api/v1/tasks with the JSON body.
 4. CORS preflight passes (Vercel origin allowed).
-5. JwtAuthFilter validates the token, populates SecurityContext with userId.
+5. JwtAuthenticationFilter validates the access token, populates SecurityContext with userId.
 6. TaskController validates the @Valid CreateTaskRequest DTO.
 7. TaskService:
       - sets userId from the authenticated principal (never the client),
@@ -235,8 +242,7 @@ TaskFlow/
 │   │   ├── dashboard/
 │   │   └── common/
 │   ├── src/main/resources/
-│   │   ├── application.yml
-│   │   └── application-prod.yml
+│   │   └── application.properties   # (application-prod.properties for prod overrides, planned)
 │   ├── src/test/java/com/taskflow/
 │   ├── .env.example
 │   ├── pom.xml
@@ -283,7 +289,7 @@ TaskFlow/
 
 **Environment configuration**
 
-- Backend reads `MONGODB_URI`, `JWT_SECRET`, `JWT_ACCESS_EXPIRATION`, `JWT_REFRESH_EXPIRATION`, `CORS_ALLOWED_ORIGINS` from Railway environment variables.
+- Backend reads `MONGODB_URI`, `JWT_SECRET`, `JWT_ACCESS_TOKEN_EXPIRATION`, `JWT_REFRESH_TOKEN_EXPIRATION`, `CORS_ALLOWED_ORIGINS` from Railway environment variables (Spring relaxed binding maps these to the `jwt.*` properties). Expirations are durations (e.g. `15m`, `7d`), not millisecond integers.
 - Frontend reads `VITE_API_URL` (the Railway API base URL) at build time from Vercel environment variables.
 - CORS on the backend is restricted to the deployed Vercel origin(s).
 
