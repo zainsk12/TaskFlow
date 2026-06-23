@@ -27,4 +27,7 @@ public interface CategoryRepository extends MongoRepository<Category, String> {
 
     /** Whether the user has a <em>different</em> category with this name (rename guard). */
     boolean existsByUserIdAndNameAndIdNot(String userId, String name, String id);
+
+    /** Total number of the user's categories (dashboard). */
+    long countByUserId(String userId);
 }

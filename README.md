@@ -206,7 +206,11 @@ Base path: `/api/v1`. The `/auth/**` routes are public; **all other endpoints re
 | `POST` | `/categories` | Create a category |
 | `PUT` | `/categories/{id}` | Update a category |
 | `DELETE` | `/categories/{id}` | Delete a category |
-| `GET` | `/dashboard/stats` | Productivity statistics |
+| `GET` | `/dashboard/summary` | Headline task counts + completion rate |
+| `GET` | `/dashboard/status-distribution` | Task counts by status |
+| `GET` | `/dashboard/priority-distribution` | Task counts by priority |
+| `GET` | `/dashboard/recent-tasks` | Newest tasks for the user |
+| `GET` | `/dashboard/productivity` | Completion %, overdue %, active workload |
 
 📄 Full request/response details: [`docs/API_SPEC.md`](./docs/API_SPEC.md).
 

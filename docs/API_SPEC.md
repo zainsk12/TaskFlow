@@ -8,11 +8,12 @@
 **Last updated:** 2026-06-23
 
 > **Implementation status.** §1 (conventions), §2 (Authentication), §3.1–§3.3
-> (profile read/update, change password), §4 Tasks CRUD (4.1–4.4, 4.6), and §5
-> Categories (full CRUD) are **implemented** — all behind stateless JWT auth
-> (HS256), user-scoped, with filtering/pagination/sorting on task listing. Not yet
-> implemented: §4.5 (`PATCH /tasks/{id}/status` — status can be changed via the
-> §4.4 `PUT` for now), §3.4 (delete account), §6 (Dashboard), and §7 (Admin).
+> (profile read/update, change password), §4 Tasks CRUD (4.1–4.4, 4.6), §5
+> Categories (full CRUD), and §6 Dashboard analytics (summary, status/priority
+> distributions, recent tasks, productivity) are **implemented** — all behind
+> stateless JWT auth (HS256), user-scoped, with filtering/pagination/sorting on
+> task listing. Not yet implemented: §4.5 (`PATCH /tasks/{id}/status` — status can
+> be changed via the §4.4 `PUT` for now), §3.4 (delete account), and §7 (Admin).
 
 ---
 
@@ -565,57 +566,97 @@ The `Category` response object:
 
 ---
 
-## 6. Dashboard Statistics
+## 6. Dashboard Analytics
 
-### 6.1 Get dashboard stats
+All dashboard routes are **read-only**, require authentication, and are scoped to
+the caller (a user only ever sees their own metrics). Status/priority breakdowns
+are computed with MongoDB `$match`+`$group` aggregations.
+
+### 6.1 Summary
 
 | | |
 |---|---|
 | **Method** | `GET` |
-| **Route** | `/api/v1/dashboard/stats` |
+| **Route** | `/api/v1/dashboard/summary` |
 | **Auth** | Required |
 
 **Response body — `200 OK`**
 ```json
 {
-  "totals": {
-    "total": 42,
-    "todo": 18,
-    "inProgress": 9,
-    "done": 15,
-    "overdue": 4
-  },
-  "byPriority": {
-    "low": 12,
-    "medium": 21,
-    "high": 9
-  },
-  "completionRate": 35.7,
-  "dueSoon": [
-    {
-      "id": "665f...c20",
-      "title": "Finish DBMS assignment",
-      "dueDate": "2026-06-25T18:30:00Z",
-      "priority": "HIGH",
-      "status": "IN_PROGRESS"
-    }
-  ],
-  "generatedAt": "2026-06-22T10:15:30Z"
+  "totalTasks": 6,
+  "todoTasks": 2,
+  "inProgressTasks": 2,
+  "completedTasks": 2,
+  "overdueTasks": 1,
+  "completionRate": 33.3,
+  "highPriorityTasks": 3,
+  "categoriesCount": 2
 }
 ```
 
 | Field | Meaning |
 |-------|---------|
-| `totals.*` | Counts of the user's tasks by status, plus overdue count. |
-| `byPriority.*` | Counts by priority. |
-| `completionRate` | `done / total × 100`, rounded to 1 decimal. |
-| `dueSoon` | Up to 5 upcoming, not-done tasks ordered by `dueDate`. |
+| `totalTasks` / `todoTasks` / `inProgressTasks` / `completedTasks` | Task counts by status. |
+| `overdueTasks` | Tasks with `dueDate < now && status != DONE`. |
+| `completionRate` | `completedTasks / totalTasks × 100`, 1 decimal (`0` when no tasks). |
+| `highPriorityTasks` | Tasks with priority `HIGH`. |
+| `categoriesCount` | Number of categories the user owns. |
 
 **Status codes:** `200` success · `401` not authenticated.
 
 ---
 
-### 6.2 (Optional) Productivity over time
+### 6.2 Status distribution
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Route** | `/api/v1/dashboard/status-distribution` |
+| **Auth** | Required |
+
+**Response body — `200 OK`** — counts keyed by status (all keys always present):
+```json
+{ "TODO": 2, "IN_PROGRESS": 2, "DONE": 2 }
+```
+
+**Status codes:** `200` success · `401` not authenticated.
+
+---
+
+### 6.3 Priority distribution
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Route** | `/api/v1/dashboard/priority-distribution` |
+| **Auth** | Required |
+
+**Response body — `200 OK`** — counts keyed by priority (all keys always present):
+```json
+{ "LOW": 1, "MEDIUM": 2, "HIGH": 3 }
+```
+
+**Status codes:** `200` success · `401` not authenticated.
+
+---
+
+### 6.4 Recent tasks
+
+| | |
+|---|---|
+| **Method** | `GET` |
+| **Route** | `/api/v1/dashboard/recent-tasks` |
+| **Auth** | Required |
+
+**Query parameters:** `limit` — number of tasks (default `5`, max `50`).
+
+**Response body — `200 OK`** — the user's newest tasks (by `createdAt` desc), as an array of `Task` objects (§4).
+
+**Status codes:** `200` success · `401` not authenticated.
+
+---
+
+### 6.5 Productivity metrics
 
 | | |
 |---|---|
@@ -623,20 +664,22 @@ The `Category` response object:
 | **Route** | `/api/v1/dashboard/productivity` |
 | **Auth** | Required |
 
-**Query parameters:** `range` = `week` \| `month` (default `week`).
-
 **Response body — `200 OK`**
 ```json
 {
-  "range": "week",
-  "series": [
-    { "date": "2026-06-16", "created": 5, "completed": 3 },
-    { "date": "2026-06-17", "created": 2, "completed": 4 }
-  ]
+  "completionPercentage": 33.3,
+  "overduePercentage": 16.7,
+  "activeWorkload": 4
 }
 ```
 
-**Status codes:** `200` success · `400` invalid range · `401` not authenticated.
+| Field | Meaning |
+|-------|---------|
+| `completionPercentage` | `completedTasks / totalTasks × 100`, 1 decimal. |
+| `overduePercentage` | `overdueTasks / totalTasks × 100`, 1 decimal. |
+| `activeWorkload` | Open tasks not yet done (`TODO + IN_PROGRESS`). |
+
+**Status codes:** `200` success · `401` not authenticated.
 
 ---
 
@@ -697,7 +740,10 @@ Used by Railway/Vercel and uptime monitors.
 | GET | `/api/v1/categories/{id}` | Required |
 | PUT | `/api/v1/categories/{id}` | Required |
 | DELETE | `/api/v1/categories/{id}` | Required |
-| GET | `/api/v1/dashboard/stats` | Required |
+| GET | `/api/v1/dashboard/summary` | Required |
+| GET | `/api/v1/dashboard/status-distribution` | Required |
+| GET | `/api/v1/dashboard/priority-distribution` | Required |
+| GET | `/api/v1/dashboard/recent-tasks` | Required |
 | GET | `/api/v1/dashboard/productivity` | Required |
 | GET | `/api/v1/admin/metrics` | Admin |
 | GET | `/actuator/health` | None |

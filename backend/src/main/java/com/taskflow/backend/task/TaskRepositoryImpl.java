@@ -2,16 +2,21 @@ package com.taskflow.backend.task;
 
 import com.taskflow.backend.common.TaskStatus;
 import lombok.RequiredArgsConstructor;
+import org.bson.Document;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.aggregation.Aggregation;
+import org.springframework.data.mongodb.core.aggregation.AggregationResults;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.support.PageableExecutionUtils;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 /**
@@ -70,5 +75,34 @@ public class TaskRepositoryImpl implements TaskRepositoryCustom {
         List<Task> tasks = mongoTemplate.find(query, Task.class);
 
         return PageableExecutionUtils.getPage(tasks, pageable, () -> total);
+    }
+
+    @Override
+    public Map<String, Long> countGroupedByStatus(String userId) {
+        return countGroupedBy(userId, "status");
+    }
+
+    @Override
+    public Map<String, Long> countGroupedByPriority(String userId) {
+        return countGroupedBy(userId, "priority");
+    }
+
+    /** {@code $match userId} then {@code $group} by the given field with a count. */
+    private Map<String, Long> countGroupedBy(String userId, String field) {
+        Aggregation aggregation = Aggregation.newAggregation(
+                Aggregation.match(Criteria.where("userId").is(userId)),
+                Aggregation.group(field).count().as("count")
+        );
+        AggregationResults<Document> results =
+                mongoTemplate.aggregate(aggregation, Task.class, Document.class);
+
+        Map<String, Long> counts = new LinkedHashMap<>();
+        for (Document doc : results.getMappedResults()) {
+            Object key = doc.get("_id");
+            if (key != null) {
+                counts.put(key.toString(), ((Number) doc.get("count")).longValue());
+            }
+        }
+        return counts;
     }
 }
