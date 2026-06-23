@@ -27,6 +27,27 @@ export function formatPercent(value) {
   return `${value}%`
 }
 
+/**
+ * Converts an ISO instant to the value a <input type="datetime-local"> expects
+ * ('YYYY-MM-DDTHH:mm' in the browser's local time). Returns '' when absent.
+ */
+export function isoToLocalInput(iso) {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  // Shift by the timezone offset so toISOString (UTC) yields local wall-clock time.
+  const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000)
+  return local.toISOString().slice(0, 16)
+}
+
+/** Converts a datetime-local input value back to an ISO instant (or null when empty). */
+export function localInputToIso(value) {
+  if (!value) return null
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return null
+  return d.toISOString()
+}
+
 /** Initials for an avatar fallback, e.g. "Ananya Sharma" -> "AS". */
 export function initials(name) {
   if (!name) return '?'
