@@ -1,0 +1,25 @@
+# =============================================================================
+# Render Blueprint — TaskFlow backend (Spring Boot 4 / Java 21)
+# =============================================================================
+# Deploys the backend as a Docker web service. Secrets (MONGODB_URI, JWT_SECRET)
+# are intentionally NOT defined here — set them in the Render dashboard or as a
+# secret group so they never land in source control. See DEPLOYMENT_FIXES.md.
+
+services:
+  - type: web
+    name: taskflow-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    region: oregon
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      # Render injects PORT automatically; server.port=${PORT:8080} reads it.
+      - key: MONGODB_URI
+        sync: false   # set in dashboard — Atlas SRV connection string
+      - key: JWT_SECRET
+        sync: false   # set in dashboard — 32+ char random secret
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false   # set in dashboard — e.g. https://taskflow.vercel.app

@@ -1,0 +1,13 @@
+# Repository-wide ignores (per-module .gitignore files add more).
+
+# Local credential / notes files — contain real secrets, must never be committed.
+IMP_Details.txt
+
+# Environment files (real values live only in the deployment platform).
+.env
+.env.local
+*.env
+
+# Logs
+*.log
+logs/
