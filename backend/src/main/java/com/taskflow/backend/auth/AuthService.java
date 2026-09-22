@@ -8,6 +8,8 @@ import com.taskflow.backend.common.DuplicateEmailException;
 import com.taskflow.backend.common.InvalidCredentialsException;
 import com.taskflow.backend.common.InvalidTokenException;
 import com.taskflow.backend.security.JwtService;
+import com.taskflow.backend.security.RevokedToken;
+import com.taskflow.backend.security.RevokedTokenRepository;
 import com.taskflow.backend.user.User;
 import com.taskflow.backend.user.UserMapper;
 import com.taskflow.backend.user.UserRepository;
@@ -20,8 +22,10 @@ import org.springframework.stereotype.Service;
  *
  * <p>Accounts are created with a BCrypt-hashed password; successful
  * register/login issues a stateless JWT pair (access + refresh) via
- * {@link JwtService}. Refresh exchanges a valid refresh token for a new access
- * token. Logout is a client-side discard in this phase (no server-side denylist).
+ * {@link JwtService}. Refresh exchanges a valid, non-revoked refresh token for
+ * a new access token. Logout revokes the presented refresh token server-side
+ * via a MongoDB denylist ({@link RevokedTokenRepository}) in addition to the
+ * client discarding its stored tokens.
  */
 @Service
 @RequiredArgsConstructor
@@ -31,6 +35,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
     private final JwtService jwtService;
+    private final RevokedTokenRepository revokedTokenRepository;
 
     /**
      * Registers a new account and immediately issues a token pair.
@@ -86,12 +91,16 @@ public class AuthService {
      * @param request the refresh-token payload
      * @return a slim {@link AuthResponse} carrying only the new access token
      * @throws InvalidTokenException if the token is missing/invalid/expired, is not a
-     *                               refresh token, or its user no longer exists
+     *                               refresh token, has been revoked (see {@link #logout}),
+     *                               or its user no longer exists
      */
     public AuthResponse refresh(RefreshRequest request) {
         String token = request.refreshToken();
 
         if (!jwtService.isRefreshToken(token)) {
+            throw new InvalidTokenException("Invalid or expired refresh token");
+        }
+        if (revokedTokenRepository.existsByJti(jwtService.extractJti(token))) {
             throw new InvalidTokenException("Invalid or expired refresh token");
         }
 
@@ -106,12 +115,33 @@ public class AuthService {
     /**
      * Logs the caller out (§2.4).
      *
-     * <p>Tokens are stateless and not denylisted in this phase, so logout is a
-     * no-op server-side — the client discards its stored tokens. The hook is kept
-     * here so a refresh-token denylist can be added without touching the controller.
+     * <p>Revokes the presented refresh token so it can no longer be exchanged for
+     * a new access token via {@link #refresh}, even before it would naturally
+     * expire. A denylist entry ({@link RevokedToken}) is stored keyed by the
+     * token's {@code jti} and expires (via a MongoDB TTL index) at the same
+     * instant the token itself would have.
+     *
+     * <p>A missing, malformed, expired, or non-refresh token is a silent no-op —
+     * the client is discarding its local tokens either way, and logout should
+     * not reveal anything about a token's validity. Already-revoked tokens are
+     * also a no-op, so calling logout twice with the same token is safe.
      */
     public void logout(RefreshRequest request) {
-        // TODO(denylist): persist the refresh token jti until expiry to hard-revoke it.
+        String token = request.refreshToken();
+        if (!jwtService.isRefreshToken(token)) {
+            return;
+        }
+
+        String jti = jwtService.extractJti(token);
+        if (revokedTokenRepository.existsByJti(jti)) {
+            return;
+        }
+
+        revokedTokenRepository.save(RevokedToken.builder()
+                .jti(jti)
+                .userId(jwtService.extractUserId(token))
+                .expiresAt(jwtService.extractExpiration(token))
+                .build());
     }
 
     private AuthResponse issueTokens(User user) {

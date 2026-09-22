@@ -15,6 +15,10 @@
  *   <li>{@link com.taskflow.backend.security.SecurityUtils} — resolves the
  *       authenticated {@code userId} for the service layer.</li>
  *   <li>{@link com.taskflow.backend.security.JwtProperties} — binds {@code jwt.*}.</li>
+ *   <li>{@link com.taskflow.backend.security.RevokedToken} /
+ *       {@link com.taskflow.backend.security.RevokedTokenRepository} — the
+ *       refresh-token denylist consulted by {@code AuthService#refresh} and
+ *       populated by {@code AuthService#logout}.</li>
  * </ul>
  *
  * <p>The {@code SecurityFilterChain} itself lives in
