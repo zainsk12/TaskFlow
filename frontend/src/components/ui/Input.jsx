@@ -5,7 +5,17 @@ import { forwardRef, useId } from 'react'
  * ref so it works with uncontrolled forms and focus management.
  */
 const Input = forwardRef(function Input(
-  { label, error, icon: Icon, className = '', id, ...rest },
+  {
+    label,
+    error,
+    icon: Icon,
+    rightIcon: RightIcon,
+    onRightIconClick,
+    rightIconLabel,
+    className = '',
+    id,
+    ...rest
+  },
   ref,
 ) {
   const generatedId = useId()
@@ -18,6 +28,7 @@ const Input = forwardRef(function Input(
           {label}
         </label>
       )}
+
       <div className="relative">
         {Icon && (
           <Icon
@@ -25,12 +36,15 @@ const Input = forwardRef(function Input(
             aria-hidden="true"
           />
         )}
+
         <input
           ref={ref}
           id={inputId}
           aria-invalid={Boolean(error)}
           className={`block w-full rounded-lg border bg-white py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 ${
-            Icon ? 'pl-9 pr-3' : 'px-3'
+            Icon ? 'pl-9' : 'pl-3'
+          } ${
+            RightIcon ? 'pr-10' : 'pr-3'
           } ${
             error
               ? 'border-rose-300 focus:border-rose-400 focus:ring-rose-200'
@@ -38,7 +52,19 @@ const Input = forwardRef(function Input(
           }`}
           {...rest}
         />
+
+        {RightIcon && (
+          <button
+            type="button"
+            onClick={onRightIconClick}
+            aria-label={rightIconLabel}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+          >
+            <RightIcon className="h-4 w-4" aria-hidden="true" />
+          </button>
+        )}
       </div>
+
       {error && <p className="mt-1.5 text-xs font-medium text-rose-600">{error}</p>}
     </div>
   )
