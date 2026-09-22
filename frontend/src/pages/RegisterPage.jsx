@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { User, Mail, Lock } from 'lucide-react'
+import { User, Mail, Lock, Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext'
 import { extractErrorMessage } from '../api/client'
 import AuthShell from './AuthShell'
@@ -11,15 +11,28 @@ export default function RegisterPage() {
   const { register } = useAuth()
   const navigate = useNavigate()
 
-  const [form, setForm] = useState({ name: '', email: '', password: '' })
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+  })
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   const update = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }))
 
   async function handleSubmit(e) {
     e.preventDefault()
     setError('')
+
+    if (form.password !== form.confirmPassword) {
+      setError('Passwords do not match.')
+      return
+    }
+
     setSubmitting(true)
     try {
       await register(form)
@@ -39,6 +52,7 @@ export default function RegisterPage() {
             {error}
           </div>
         )}
+
         <Input
           label="Name"
           type="text"
@@ -49,6 +63,7 @@ export default function RegisterPage() {
           onChange={update('name')}
           required
         />
+
         <Input
           label="Email"
           type="email"
@@ -59,16 +74,35 @@ export default function RegisterPage() {
           onChange={update('email')}
           required
         />
+
         <Input
           label="Password"
-          type="password"
+          type={showPassword ? 'text' : 'password'}
           icon={Lock}
+          rightIcon={showPassword ? EyeOff : Eye}
+          onRightIconClick={() => setShowPassword((value) => !value)}
+          rightIconLabel={showPassword ? 'Hide password' : 'Show password'}
           autoComplete="new-password"
           placeholder="At least 8 characters"
           value={form.password}
           onChange={update('password')}
           required
         />
+
+        <Input
+          label="Confirm Password"
+          type={showConfirmPassword ? 'text' : 'password'}
+          icon={Lock}
+          rightIcon={showConfirmPassword ? EyeOff : Eye}
+          onRightIconClick={() => setShowConfirmPassword((value) => !value)}
+          rightIconLabel={showConfirmPassword ? 'Hide password' : 'Show password'}
+          autoComplete="new-password"
+          placeholder="Re-enter your password"
+          value={form.confirmPassword}
+          onChange={update('confirmPassword')}
+          required
+        />
+
         <Button type="submit" className="w-full" loading={submitting}>
           Create account
         </Button>
