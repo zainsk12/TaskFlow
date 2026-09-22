@@ -1,5 +1,7 @@
 package com.taskflow.backend.config;
 
+import com.taskflow.backend.ratelimit.RateLimitFilter;
+import com.taskflow.backend.ratelimit.RateLimitProperties;
 import com.taskflow.backend.security.JwtAuthenticationEntryPoint;
 import com.taskflow.backend.security.JwtAuthenticationFilter;
 import com.taskflow.backend.security.JwtProperties;
@@ -33,6 +35,8 @@ import org.springframework.web.cors.CorsConfigurationSource;
  *   <li>{@code /api/v1/auth/**} is public (register, login, refresh, logout).</li>
  *   <li>Everything else — {@code /api/v1/users/**}, {@code /tasks/**},
  *       {@code /categories/**}, {@code /dashboard/**} — requires a valid access token.</li>
+ *   <li>{@link RateLimitFilter} runs first, ahead of everything else, and throttles
+ *       {@code /api/v1/auth/{login,register,refresh}} (Issue #3).</li>
  *   <li>{@link JwtAuthenticationFilter} runs before the username/password filter and
  *       populates the security context; {@link JwtAuthenticationEntryPoint} renders
  *       {@code 401}s as the standard {@code ApiError} body.</li>
@@ -40,12 +44,13 @@ import org.springframework.web.cors.CorsConfigurationSource;
  */
 @Configuration
 @EnableWebSecurity
-@EnableConfigurationProperties({JwtProperties.class, RefreshCookieProperties.class})
+@EnableConfigurationProperties({JwtProperties.class, RefreshCookieProperties.class, RateLimitProperties.class})
 @RequiredArgsConstructor
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+    private final RateLimitFilter rateLimitFilter;
     private final CorsConfigurationSource corsConfigurationSource;
 
     @Bean
@@ -72,7 +77,8 @@ public class SecurityConfig {
                 .httpBasic(basic -> basic.disable())
                 .formLogin(form -> form.disable())
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(jwtAuthenticationEntryPoint))
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(rateLimitFilter, JwtAuthenticationFilter.class);
 
         return http.build();
     }
