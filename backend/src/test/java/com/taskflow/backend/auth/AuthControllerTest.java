@@ -2,6 +2,8 @@ package com.taskflow.backend.auth;
 
 import com.taskflow.backend.auth.dto.AuthResponse;
 import com.taskflow.backend.common.Role;
+import com.taskflow.backend.ratelimit.RateLimitProperties;
+import com.taskflow.backend.ratelimit.RateLimiter;
 import com.taskflow.backend.security.JwtService;
 import com.taskflow.backend.security.RefreshCookieProperties;
 import com.taskflow.backend.user.dto.UserResponse;
@@ -47,6 +49,17 @@ class AuthControllerTest {
 
     @MockitoBean
     private RefreshCookieProperties cookieProperties;
+
+    // @WebMvcTest auto-detects Filter beans (see RateLimitFilter, Issue #3) in
+    // addition to the sliced controller, so its constructor dependencies must
+    // be satisfiable here too — even though addFilters=false means the filter
+    // never actually runs during these requests. Mocked for bean creation
+    // only, same as JwtService/RefreshCookieProperties above.
+    @MockitoBean
+    private RateLimiter rateLimiter;
+
+    @MockitoBean
+    private RateLimitProperties rateLimitProperties;
 
     @Test
     void loginSetsHttpOnlyCookieAndOmitsRefreshTokenFromBody() throws Exception {
