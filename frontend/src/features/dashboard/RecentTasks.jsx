@@ -14,7 +14,7 @@ const PRIORITY_DOT = {
   HIGH: 'bg-rose-500',
 }
 
-/** List of the user's most recently updated tasks. */
+/** List of the user's most recently created tasks. */
 export default function RecentTasks({ tasks = [] }) {
   return (
     <Card className="p-5">
