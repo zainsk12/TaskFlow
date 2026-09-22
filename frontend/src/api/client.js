@@ -1,16 +1,15 @@
 import axios from 'axios'
 import { API_BASE_URL, AUTH_LOGOUT_EVENT } from '../lib/constants'
-import {
-  getAccessToken,
-  getRefreshToken,
-  setAccessToken,
-  clearTokens,
-} from '../auth/tokenStorage'
+import { getAccessToken, setAccessToken, clearAccessToken } from '../auth/tokenStorage'
 
 // Shared axios instance. All app API calls go through here.
+// `withCredentials: true` so the browser sends/accepts the HttpOnly
+// refresh-token cookie (see backend CorsConfig, which allows credentials from
+// the configured frontend origin(s) only — never a wildcard).
 const client = axios.create({
   baseURL: API_BASE_URL,
   headers: { 'Content-Type': 'application/json' },
+  withCredentials: true,
 })
 
 // Endpoints that must never trigger a refresh-and-retry (they ARE the auth flow).
@@ -31,13 +30,14 @@ client.interceptors.request.use((config) => {
 
 // --- Response: transparently refresh on 401, once ---------------------------
 // A single in-flight refresh is shared by all concurrent 401s (no stampede).
+// The refresh token itself is never read here — it's an HttpOnly cookie the
+// browser attaches automatically to this request.
 let refreshPromise = null
 
 function refreshAccessToken() {
   if (!refreshPromise) {
-    const refreshToken = getRefreshToken()
     refreshPromise = axios
-      .post(`${API_BASE_URL}/auth/refresh`, { refreshToken })
+      .post(`${API_BASE_URL}/auth/refresh`, null, { withCredentials: true })
       .then((res) => {
         const newToken = res.data?.accessToken
         setAccessToken(newToken)
@@ -51,7 +51,7 @@ function refreshAccessToken() {
 }
 
 function forceLogout() {
-  clearTokens()
+  clearAccessToken()
   window.dispatchEvent(new Event(AUTH_LOGOUT_EVENT))
 }
 
@@ -65,8 +65,7 @@ client.interceptors.response.use(
       status === 401 &&
       original &&
       !original._retry &&
-      !isAuthPath(original.url) &&
-      getRefreshToken()
+      !isAuthPath(original.url)
 
     if (!canRetry) {
       // A 401 on a normal request with no way to recover ends the session.

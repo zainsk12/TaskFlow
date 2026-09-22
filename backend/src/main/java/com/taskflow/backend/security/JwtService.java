@@ -161,6 +161,11 @@ public class JwtService {
         return accessTokenExpiration.toSeconds();
     }
 
+    /** Refresh-token lifetime in seconds — used as the refresh-token cookie's {@code Max-Age}. */
+    public long getRefreshTokenExpiresInSeconds() {
+        return refreshTokenExpiration.toSeconds();
+    }
+
     /**
      * Parses and verifies the token, returning its claims.
      *

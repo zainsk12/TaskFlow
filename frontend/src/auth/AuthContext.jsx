@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { loginRequest, registerRequest, logoutRequest } from '../api/auth'
-import { setTokens, clearTokens, hasTokens, getRefreshToken } from './tokenStorage'
+import { setAccessToken, clearAccessToken, hasAccessToken } from './tokenStorage'
 import { AUTH_LOGOUT_EVENT } from '../lib/constants'
 
 const AuthContext = createContext(null)
@@ -11,25 +11,25 @@ const AuthContext = createContext(null)
  * {@link UserContext}, which loads it once a session exists.
  */
 export function AuthProvider({ children }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(() => hasTokens())
+  const [isAuthenticated, setIsAuthenticated] = useState(() => hasAccessToken())
 
   const login = useCallback(async (credentials) => {
     const data = await loginRequest(credentials)
-    setTokens(data)
+    setAccessToken(data.accessToken)
     setIsAuthenticated(true)
     return data.user
   }, [])
 
   const register = useCallback(async (details) => {
     const data = await registerRequest(details)
-    setTokens(data)
+    setAccessToken(data.accessToken)
     setIsAuthenticated(true)
     return data.user
   }, [])
 
   const logout = useCallback(async () => {
-    await logoutRequest(getRefreshToken())
-    clearTokens()
+    await logoutRequest()
+    clearAccessToken()
     setIsAuthenticated(false)
   }, [])
 

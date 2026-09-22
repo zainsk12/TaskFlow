@@ -3,6 +3,7 @@ package com.taskflow.backend.config;
 import com.taskflow.backend.security.JwtAuthenticationEntryPoint;
 import com.taskflow.backend.security.JwtAuthenticationFilter;
 import com.taskflow.backend.security.JwtProperties;
+import com.taskflow.backend.security.RefreshCookieProperties;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -21,8 +22,14 @@ import org.springframework.web.cors.CorsConfigurationSource;
  *
  * <p>Policy:
  * <ul>
- *   <li>No sessions ({@link SessionCreationPolicy#STATELESS}); no CSRF (there is
- *       no cookie-based auth); no HTTP Basic / form login.</li>
+ *   <li>No sessions ({@link SessionCreationPolicy#STATELESS}); no HTTP Basic /
+ *       form login. CSRF remains disabled: API authorization is still a Bearer
+ *       access token attached manually by the frontend (not an ambient
+ *       credential), so it is not CSRF-exploitable. The refresh-token cookie
+ *       (see {@code AuthController}) is only read by {@code /auth/refresh} and
+ *       {@code /auth/logout}; a forged cross-site request to either cannot read
+ *       the response body thanks to the strict {@code CorsConfig} origin
+ *       allow-list.</li>
  *   <li>{@code /api/v1/auth/**} is public (register, login, refresh, logout).</li>
  *   <li>Everything else — {@code /api/v1/users/**}, {@code /tasks/**},
  *       {@code /categories/**}, {@code /dashboard/**} — requires a valid access token.</li>
@@ -33,7 +40,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
  */
 @Configuration
 @EnableWebSecurity
-@EnableConfigurationProperties(JwtProperties.class)
+@EnableConfigurationProperties({JwtProperties.class, RefreshCookieProperties.class})
 @RequiredArgsConstructor
 public class SecurityConfig {
 

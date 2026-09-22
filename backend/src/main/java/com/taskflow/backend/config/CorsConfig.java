@@ -36,9 +36,11 @@ public class CorsConfig {
         config.setAllowedOrigins(allowedOrigins);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
-        // Auth is stateless Bearer tokens in the Authorization header (not cookies),
-        // so credentials are not required; keep them disabled to allow explicit origins.
-        config.setAllowCredentials(false);
+        // The refresh token now travels as an HttpOnly cookie (see AuthController),
+        // so the browser must be allowed to send/receive credentials on cross-origin
+        // requests. This requires an explicit origin allow-list above — never a
+        // wildcard — which CORS_ALLOWED_ORIGINS already provides.
+        config.setAllowCredentials(true);
         config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
