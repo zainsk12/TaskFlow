@@ -10,7 +10,9 @@ import org.springframework.stereotype.Service;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Date;
+import java.util.UUID;
 
 /**
  * Issues and verifies the application's JSON Web Tokens.
@@ -26,7 +28,10 @@ import java.util.Date;
  *       for a fresh access token.</li>
  * </ul>
  *
- * <p>Claims layout: {@code sub} = user id, {@code email}, {@code role}, {@code typ}.
+ * <p>Claims layout: {@code jti} (random, unique per token), {@code sub} = user id,
+ * {@code email}, {@code role}, {@code typ}. {@code jti} is what lets a specific
+ * refresh token be revoked (see {@code com.taskflow.backend.security.RevokedToken})
+ * without invalidating every token a user holds.
  */
 @Service
 public class JwtService {
@@ -71,6 +76,7 @@ public class JwtService {
         Date now = new Date();
         Date expiry = new Date(now.getTime() + ttl.toMillis());
         return Jwts.builder()
+                .id(UUID.randomUUID().toString())
                 .subject(user.getId())
                 .claim(CLAIM_EMAIL, user.getEmail())
                 .claim(CLAIM_ROLE, user.getRole().name())
@@ -129,6 +135,16 @@ public class JwtService {
     /** Extracts the {@code role} claim. Throws if the token is invalid. */
     public String extractRole(String token) {
         return parseClaims(token).get(CLAIM_ROLE, String.class);
+    }
+
+    /** Extracts the token's unique id ({@code jti} claim). Throws if the token is invalid. */
+    public String extractJti(String token) {
+        return parseClaims(token).getId();
+    }
+
+    /** Extracts the token's expiration instant ({@code exp} claim). Throws if the token is invalid. */
+    public Instant extractExpiration(String token) {
+        return parseClaims(token).getExpiration().toInstant();
     }
 
     /** {@code true} if the token's {@code exp} is in the past. Throws if otherwise invalid. */

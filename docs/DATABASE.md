@@ -271,3 +271,32 @@ Applied at the database level in addition to application validation, for defence
 - **Category deletion.** Deleting a category sets `categoryId` to `null` on its tasks (tasks are not deleted) — work is never lost because a grouping was removed.
 - **Timestamps.** `createdAt`/`updatedAt` are managed by Spring Data auditing (`@CreatedDate`, `@LastModifiedDate`).
 - **No cross-user references.** A task's `categoryId` must resolve to a category with the same `userId`; enforced before write.
+
+---
+
+## 9. Collection: `revoked_tokens`
+
+Denylist of revoked refresh tokens, populated on logout (`POST /api/v1/auth/logout`) and consulted on refresh (`POST /api/v1/auth/refresh`) so a token can be hard-revoked before its natural expiry. See `backend/.../security/RevokedToken.java`.
+
+### 9.1 Fields
+
+| Field | Type | Required | Notes |
+|-------|------|----------|-------|
+| `_id` | ObjectId | yes | Mongo-assigned. |
+| `jti` | String | yes | The revoked token's `jti` claim. |
+| `userId` | String | yes | Owner of the revoked token, for traceability. References `users._id`. |
+| `expiresAt` | Date | yes | Mirrors the revoked token's own `exp` claim. |
+
+### 9.2 Indexes
+
+| Index | Type | Reason |
+|-------|------|--------|
+| `{ jti: 1 }` | unique | Fast revocation lookup on every refresh; defence in depth alongside the service-layer `existsByJti` check. |
+| `{ expiresAt: 1 }` | TTL (`expireAfterSeconds: 0`) | Once a revoked token would have expired naturally anyway, its denylist entry is no longer needed — MongoDB deletes it automatically. |
+
+> **Auto index creation is off** in this project (see `application.properties`), so — exactly like the existing `users.email_1` index — these two indexes must be created once, out of band, before relying on them in a given environment:
+> ```js
+> db.revoked_tokens.createIndex({ jti: 1 }, { unique: true })
+> db.revoked_tokens.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 })
+> ```
+> Run this against local `mongod` for development and against the Atlas cluster for staging/production (Atlas → Collections → `revoked_tokens` → Indexes, or via `mongosh`/Compass with the commands above).
