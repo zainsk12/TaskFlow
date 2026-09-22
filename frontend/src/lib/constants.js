@@ -2,9 +2,9 @@
 // proxies to the Spring Boot server in dev (see vite.config.js).
 export const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1'
 
-// localStorage keys for the JWT pair.
+// localStorage key for the access token. The refresh token is no longer
+// stored here — it lives in an HttpOnly cookie the browser manages itself.
 export const ACCESS_TOKEN_KEY = 'taskflow.accessToken'
-export const REFRESH_TOKEN_KEY = 'taskflow.refreshToken'
 
 // Window event dispatched when the session can no longer be recovered
 // (refresh failed) so React can react and redirect to /login.

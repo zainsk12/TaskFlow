@@ -43,4 +43,13 @@ public record AuthResponse(
     public static AuthResponse accessOnly(String accessToken, long expiresIn) {
         return new AuthResponse(accessToken, null, BEARER, expiresIn, null);
     }
+
+    /**
+     * Same response with {@code refreshToken} stripped. The refresh token now
+     * travels only as an HttpOnly cookie (see {@code AuthController}), so
+     * register/login responses must not also echo it into the JSON body.
+     */
+    public AuthResponse withoutRefreshToken() {
+        return new AuthResponse(accessToken, null, tokenType, expiresIn, user);
+    }
 }

@@ -4,7 +4,7 @@ import client from './client'
 
 export async function loginRequest({ email, password }) {
   const { data } = await client.post('/auth/login', { email, password })
-  return data // { accessToken, refreshToken, tokenType, expiresIn, user }
+  return data // { accessToken, tokenType, expiresIn, user } — refreshToken is an HttpOnly cookie
 }
 
 export async function registerRequest({ name, email, password }) {
@@ -12,10 +12,11 @@ export async function registerRequest({ name, email, password }) {
   return data // same shape as login (auto-login)
 }
 
-export async function logoutRequest(refreshToken) {
-  // Backend logout is a stateless 204; ignore failures (we clear locally anyway).
+export async function logoutRequest() {
+  // The refresh token is an HttpOnly cookie sent automatically; nothing to pass
+  // in the body. Ignore failures — we clear the local session either way.
   try {
-    await client.post('/auth/logout', { refreshToken })
+    await client.post('/auth/logout')
   } catch {
     /* no-op */
   }
