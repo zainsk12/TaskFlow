@@ -6,6 +6,7 @@ import com.taskflow.backend.common.TaskStatus;
 import com.taskflow.backend.task.dto.CreateTaskRequest;
 import com.taskflow.backend.task.dto.TaskResponse;
 import com.taskflow.backend.task.dto.UpdateTaskRequest;
+import com.taskflow.backend.task.dto.UpdateTaskStatusRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -14,6 +15,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -76,6 +78,13 @@ public class TaskController {
     public ResponseEntity<TaskResponse> update(@PathVariable String id,
                                                @Valid @RequestBody UpdateTaskRequest request) {
         return ResponseEntity.ok(taskService.update(id, request));
+    }
+
+    /** {@code PATCH /tasks/{id}/status} — update only the task status. */
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<TaskResponse> updateStatus(@PathVariable String id,
+                                                     @Valid @RequestBody UpdateTaskStatusRequest request) {
+        return ResponseEntity.ok(taskService.updateStatus(id, request));
     }
 
     /** {@code DELETE /tasks/{id}} — delete a task ({@code 204 No Content}). */
