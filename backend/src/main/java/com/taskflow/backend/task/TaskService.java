@@ -9,6 +9,7 @@ import com.taskflow.backend.security.SecurityUtils;
 import com.taskflow.backend.task.dto.CreateTaskRequest;
 import com.taskflow.backend.task.dto.TaskResponse;
 import com.taskflow.backend.task.dto.UpdateTaskRequest;
+import com.taskflow.backend.task.dto.UpdateTaskStatusRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -104,6 +105,20 @@ public class TaskService {
             applyStatusTransition(task, request.status());
         }
 
+        return taskMapper.toResponse(taskRepository.save(task));
+    }
+
+    /**
+     * Updates only the status of one of the current user's tasks.
+     *
+     * <p>All other task fields are left untouched. Transitioning to/from
+     * {@code DONE} sets/clears {@code completedAt} exactly as the full update
+     * does.
+     */
+    public TaskResponse updateStatus(String id, UpdateTaskStatusRequest request) {
+        String userId = SecurityUtils.currentUserId();
+        Task task = loadOwned(id, userId);
+        applyStatusTransition(task, request.status());
         return taskMapper.toResponse(taskRepository.save(task));
     }
 
