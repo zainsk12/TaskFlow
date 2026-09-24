@@ -1,25 +1,62 @@
 # =============================================================================
-# Render Blueprint — TaskFlow backend (Spring Boot 4 / Java 21)
+# Render Blueprint — TaskFlow Backend
+# Java 21 + Spring Boot + MongoDB Atlas
 # =============================================================================
-# Deploys the backend as a Docker web service. Secrets (MONGODB_URI, JWT_SECRET)
-# are intentionally NOT defined here — set them in the Render dashboard or as a
-# secret group so they never land in source control. See DEPLOYMENT_FIXES.md.
 
 services:
   - type: web
     name: taskflow-backend
     runtime: docker
+
+    # Docker configuration
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
+
+    # Render plan and region
     plan: free
     region: oregon
+
+    # Health check
     healthCheckPath: /health
+
+    # Automatically deploy when changes are pushed to the connected branch
     autoDeploy: true
+
+    # Secrets and environment-specific values are intentionally NOT stored
+    # in this file. Configure them in the Render dashboard.
     envVars:
-      # Render injects PORT automatically; server.port=${PORT:8080} reads it.
       - key: MONGODB_URI
-        sync: false   # set in dashboard — Atlas SRV connection string
+        sync: false
+
       - key: JWT_SECRET
-        sync: false   # set in dashboard — 32+ char random secret
+        sync: false
+
       - key: CORS_ALLOWED_ORIGINS
-        sync: false   # set in dashboard — e.g. https://taskflow.vercel.app
+        sync: false
+
+      # Refresh-token cookie settings
+      - key: COOKIE_SECURE
+        value: "true"
+
+      - key: COOKIE_SAME_SITE
+        value: "None"
+
+      # Rate limiting
+      - key: RATE_LIMIT_ENABLED
+        value: "true"
+
+      - key: RATE_LIMIT_WINDOW
+        value: "1m"
+
+      - key: RATE_LIMIT_LOGIN_MAX
+        value: "5"
+
+      - key: RATE_LIMIT_REGISTER_MAX
+        value: "5"
+
+      - key: RATE_LIMIT_REFRESH_MAX
+        value: "10"
+
+      # Trust Render's reverse proxy for client IP detection
+      - key: FORWARD_HEADERS_STRATEGY
+        value: "native"

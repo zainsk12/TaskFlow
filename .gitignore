@@ -1,13 +1,56 @@
-# Repository-wide ignores (per-module .gitignore files add more).
+# ============================================================
+# TaskFlow — Repository-wide Git ignores
+# Module-specific rules are defined in backend/.gitignore
+# and frontend/.gitignore.
+# ============================================================
 
-# Local credential / notes files — contain real secrets, must never be committed.
+# ------------------------------------------------------------
+# Environment & Secrets
+# ------------------------------------------------------------
+.env
+.env.*
+*.env
+!.env.example
+!.env.sample
+
+# Local credential / notes files
 IMP_Details.txt
 
-# Environment files (real values live only in the deployment platform).
-.env
-.env.local
-*.env
-
+# ------------------------------------------------------------
 # Logs
+# ------------------------------------------------------------
 *.log
 logs/
+
+# ------------------------------------------------------------
+# Java / Maven
+# ------------------------------------------------------------
+**/target/
+**/.mvn/timing.properties
+
+# ------------------------------------------------------------
+# Build / generated output
+# ------------------------------------------------------------
+**/build/
+
+# ------------------------------------------------------------
+# IDE / Editor files
+# ------------------------------------------------------------
+.idea/
+*.iml
+.vscode/
+!.vscode/extensions.json
+
+# ------------------------------------------------------------
+# OS generated files
+# ------------------------------------------------------------
+.DS_Store
+Thumbs.db
+
+# ------------------------------------------------------------
+# Temporary files
+# ------------------------------------------------------------
+*.tmp
+*.temp
+*.swp
+*.swo

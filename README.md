@@ -4,17 +4,17 @@
 
 ### Smart Task & Workflow Management Platform
 
-Clean, modern task management with workflow tracking and productivity insights — without the complexity of enterprise tools or the limits of a basic to-do list.
+A full-stack task and workflow management platform for organizing tasks, tracking progress, managing priorities, and monitoring productivity through a clean and responsive interface.
 
-[![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)](https://react.dev/)
-[![Vite](https://img.shields.io/badge/Vite-5-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
+[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)](https://react.dev/)
+[![Vite](https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white)](https://vite.dev/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
 [![Java](https://img.shields.io/badge/Java-21-007396?logo=openjdk&logoColor=white)](https://openjdk.org/)
 [![Spring Boot](https://img.shields.io/badge/Spring_Boot-4.1-6DB33F?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
 [![MongoDB](https://img.shields.io/badge/MongoDB-7-47A248?logo=mongodb&logoColor=white)](https://www.mongodb.com/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](#-license)
 
-[Live Demo](#) · [Report Bug](../../issues) · [Request Feature](../../issues)
+[![Live Demo](https://img.shields.io/badge/Live-Demo-000000?logo=vercel&logoColor=white)](https://task-flow-weld-nu.vercel.app/)
+[![GitHub](https://img.shields.io/badge/GitHub-Repository-181717?logo=github&logoColor=white)](https://github.com/zainsk12/TaskFlow)
 
 </div>
 
@@ -22,26 +22,67 @@ Clean, modern task management with workflow tracking and productivity insights �
 
 ## 📖 Description
 
-**TaskFlow** is a full-stack task and workflow management platform built for students, freelancers, and small teams. It deliberately sits between lightweight to-do apps (which lack structure) and heavyweight tools like Jira (which carry a steep learning curve).
+**TaskFlow** is a full-stack task and workflow management platform built for students, freelancers, and small teams. It provides structured task management without the complexity of large enterprise project-management platforms.
 
-Users can capture tasks, organize them into colour-coded categories, move them through a simple workflow (**To Do → In Progress → Done**), set priorities and deadlines, and review their productivity through a clean dashboard. The backend is a **stateless, JWT-secured Spring Boot REST API** backed by **MongoDB**, and the frontend is a fast **React + Vite** single-page app.
+Users can create and organize tasks, assign priorities and deadlines, group work into categories, move tasks through a simple workflow, apply filters, and monitor productivity through a dashboard.
 
-This is a production-grade reference implementation demonstrating a complete modern stack — React on the frontend, Java/Spring Boot on the backend, and MongoDB for storage — with clean architecture, secure authentication, and cloud deployment.
+The application follows a decoupled architecture with a **React + Vite frontend**, **Spring Boot REST API**, and **MongoDB** database.
 
 ---
 
 ## ✨ Features
 
-- 🔐 **Secure authentication** — email/password sign-up and login with JWT access & refresh tokens.
-- ✅ **Task management** — full CRUD with title, description, priority, due date, and category.
-- 🔄 **Workflow tracking** — move tasks through To Do, In Progress, and Done with dedicated status transitions.
-- 🎯 **Priorities & deadlines** — Low / Medium / High priorities and automatic overdue detection.
-- 🏷️ **Categories** — create colour-coded categories to group related work.
-- 🔍 **Filter, sort & search** — slice tasks by status, priority, category, or keyword; paginated lists.
-- 📊 **Productivity dashboard** — counts by status and priority, overdue tracking, and completion rate.
-- 👤 **Profile management** — update profile, change password, delete account (with data cascade).
-- 📱 **Responsive UI** — works cleanly from mobile to desktop.
-- 🛡️ **Strict data isolation** — every resource is scoped to its owner and enforced server-side.
+### 🔐 Authentication & Security
+- Email/password registration and login
+- JWT-based authentication
+- Short-lived access tokens and refresh tokens
+- Refresh token stored in an **HttpOnly cookie**
+- Refresh-token revocation on logout
+- Password hashing with BCrypt
+- Authentication endpoint rate limiting
+- Server-side authorization and user data isolation
+
+### ✅ Task Management
+- Create, view, update, and delete tasks
+- Task title, description, priority, due date, and category
+- Task status workflow:
+  - To Do
+  - In Progress
+  - Done
+- Dedicated task status update endpoint
+- Search, filtering, sorting, and pagination
+
+### 🏷️ Organization
+- Create and manage colour-coded categories
+- Filter tasks by status, priority, and category
+- Saved task filter presets
+
+### 📊 Dashboard & Productivity
+- Task counts by status
+- Task counts by priority
+- Completion rate
+- Overdue task tracking
+- Recent tasks
+- Productivity summary
+
+### 👤 User Management
+- View and update profile
+- Change password
+- Delete account with associated data cleanup
+- Confirm-password validation during registration
+
+### 📱 Frontend
+- Responsive interface
+- React Router-based navigation
+- Modern Tailwind CSS UI
+- Client-side API communication with Axios
+- TanStack Query for server-state management
+
+### 🧪 Quality
+- Backend unit and controller tests
+- Automated frontend tests
+- ESLint checks
+- Production frontend build verification
 
 ---
 
@@ -49,49 +90,72 @@ This is a production-grade reference implementation demonstrating a complete mod
 
 | Layer | Technologies |
 |-------|--------------|
-| **Frontend** | React 18, Vite, TailwindCSS, React Router, TanStack Query, Axios |
+| **Frontend** | React 19, Vite 8, Tailwind CSS 4, React Router, TanStack Query, Axios |
 | **Backend** | Java 21, Spring Boot 4.1, Spring Web MVC, Spring Security, JJWT |
-| **Database** | MongoDB (Spring Data MongoDB) |
-| **Auth** | Stateless JWT (HS256 access + refresh tokens), BCrypt password hashing |
-| **Deployment** | Vercel (frontend), Railway (backend), MongoDB Atlas (database) |
-| **Tooling** | GitHub, GitHub Actions (CI), Maven |
+| **Database** | MongoDB with Spring Data MongoDB |
+| **Authentication** | JWT, HttpOnly refresh-token cookie, BCrypt |
+| **Deployment** | Vercel (frontend), Render (backend), MongoDB Atlas (database) |
+| **Development** | Git, GitHub, Maven, npm |
 
 ---
 
 ## 🏗️ Architecture Overview
 
-```
-┌──────────────┐      HTTPS / JSON + JWT      ┌─────────────────────┐
-│   React SPA  │  ─────────────────────────▶  │   Spring Boot API    │
-│   (Vercel)   │  ◀─────────────────────────  │   (Railway)          │
-└──────────────┘                              └──────────┬──────────┘
-                                                         │
-                                                         ▼
-                                              ┌─────────────────────┐
-                                              │   MongoDB Atlas      │
-                                              └─────────────────────┘
+```text
+┌──────────────────────┐
+│      React SPA       │
+│       Vercel         │
+└──────────┬───────────┘
+           │
+           │ HTTPS / REST API
+           ▼
+┌──────────────────────┐
+│    Spring Boot API   │
+│       Render         │
+└──────────┬───────────┘
+           │
+           │ Spring Data MongoDB
+           ▼
+┌──────────────────────┐
+│    MongoDB Atlas     │
+└──────────────────────┘
 ```
 
-- **Decoupled client–server**: the React SPA and Spring Boot API deploy and scale independently, sharing only a documented REST contract.
-- **Stateless backend**: identity travels in a signed JWT on every request — no server-side sessions, so the API scales horizontally.
-- **Layered backend**: `Controller → Service → Repository`, with all business rules and authorization in the service layer.
+### Architecture principles
 
-📚 Full documentation lives in [`/docs`](./docs):
-[SRS](./docs/SRS.md) · [Architecture](./docs/ARCHITECTURE.md) · [Database](./docs/DATABASE.md) · [API Spec](./docs/API_SPEC.md)
+- **Decoupled client-server architecture** — frontend and backend are deployed independently.
+- **REST API** — the frontend communicates with the backend through documented REST endpoints.
+- **Layered backend** — `Controller → Service → Repository`.
+- **Secure authentication** — JWT access tokens with refresh-token handling through an HttpOnly cookie.
+- **Server-side authorization** — users can access only their own protected resources.
+
+📚 Full documentation:
+
+- [Software Requirements Specification](./docs/SRS.md)
+- [Architecture Documentation](./docs/ARCHITECTURE.md)
+- [Database Documentation](./docs/DATABASE.md)
+- [API Specification](./docs/API_SPEC.md)
 
 ---
 
-## 📸 Screenshots
+## 🌐 Live Deployment
 
-> _Replace these placeholders with real screenshots/GIFs once the UI is built._
+### Frontend
 
-| Dashboard | Task Board | Task Detail |
-|-----------|-----------|-------------|
-| _`docs/screenshots/dashboard.png`_ | _`docs/screenshots/tasks.png`_ | _`docs/screenshots/task-detail.png`_ |
+**TaskFlow Web App:**  
+https://task-flow-weld-nu.vercel.app/
 
-<div align="center">
-  <em>📷 Coming soon</em>
-</div>
+The frontend is deployed on **Vercel** from the `frontend/` directory.
+
+### Backend
+
+The Spring Boot backend is deployed on **Render**.
+
+The backend deployment uses the repository's [`render.yaml`](./render.yaml) configuration and Docker-based deployment.
+
+### Database
+
+The application uses **MongoDB Atlas** for the production database.
 
 ---
 
@@ -100,14 +164,14 @@ This is a production-grade reference implementation demonstrating a complete mod
 ### Prerequisites
 
 - **Node.js** 18+ and npm
-- **Java 21** (JDK)
+- **Java 21** JDK
 - **Maven** 3.9+
-- A **MongoDB** instance (local or [MongoDB Atlas](https://www.mongodb.com/atlas))
+- MongoDB locally or a MongoDB Atlas cluster
 
 ### Clone the repository
 
 ```bash
-git clone https://github.com/<your-username>/TaskFlow.git
+git clone https://github.com/zainsk12/TaskFlow.git
 cd TaskFlow
 ```
 
@@ -115,24 +179,46 @@ cd TaskFlow
 
 ## 🔑 Environment Variables
 
-### Backend — `backend/.env` (or Railway variables)
+### Backend
+
+Create:
+
+```text
+backend/.env
+```
+
+Configure the required backend environment variables:
 
 | Variable | Description | Example |
 |----------|-------------|---------|
 | `MONGODB_URI` | MongoDB connection string | `mongodb+srv://user:pass@cluster.mongodb.net/taskflow` |
-| `JWT_SECRET` | HS256 signing secret (≥ 256 bits / 32 chars; long & random) | `a-very-long-random-secret-min-32-chars` |
-| `JWT_ACCESS_TOKEN_EXPIRATION` | Access token lifetime (duration) | `15m` |
-| `JWT_REFRESH_TOKEN_EXPIRATION` | Refresh token lifetime (duration) | `7d` |
-| `CORS_ALLOWED_ORIGINS` | Allowed frontend origin(s) | `https://taskflow.vercel.app` |
-| `SERVER_PORT` | Port the API listens on | `8080` |
+| `JWT_SECRET` | Long random JWT signing secret | `your-long-random-secret` |
+| `JWT_ACCESS_TOKEN_EXPIRATION` | Access token lifetime | `15m` |
+| `JWT_REFRESH_TOKEN_EXPIRATION` | Refresh token lifetime | `7d` |
+| `CORS_ALLOWED_ORIGINS` | Allowed frontend origin | `https://task-flow-weld-nu.vercel.app` |
+| `SERVER_PORT` | Local API port | `8080` |
 
-### Frontend — `frontend/.env`
+See [`backend/.env.example`](./backend/.env.example) for the complete environment configuration.
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `VITE_API_URL` | Base URL of the backend API | `http://localhost:8080/api/v1` |
+### Frontend
 
-> `.env.example` files are provided in both `frontend/` and `backend/`. Copy them to `.env` and fill in your values. **Never commit real secrets.**
+Create:
+
+```text
+frontend/.env
+```
+
+Set:
+
+```env
+VITE_API_URL=http://localhost:8080/api/v1
+```
+
+For the deployed frontend, configure `VITE_API_URL` in the Vercel project settings with the deployed Render backend API URL.
+
+See [`frontend/.env.example`](./frontend/.env.example).
+
+> **Important:** Never commit real credentials, MongoDB connection strings, JWT secrets, or other sensitive environment values.
 
 ---
 
@@ -140,20 +226,40 @@ cd TaskFlow
 
 ```bash
 cd backend
+```
 
-# copy and edit env vars
+Copy the environment template:
+
+```bash
 cp .env.example .env
+```
 
-# run with Maven
+Then configure the values in `.env`.
+
+Run the application with Maven:
+
+```bash
 ./mvnw spring-boot:run
+```
 
-# or build a jar and run it
+Or build and run the JAR:
+
+```bash
 ./mvnw clean package
 java -jar target/backend-*.jar
 ```
 
-The API will be available at **`http://localhost:8080`** (base path `/api/v1`).
-Health check: `http://localhost:8080/actuator/health`.
+The local API runs on:
+
+```text
+http://localhost:8080
+```
+
+Health check:
+
+```text
+http://localhost:8080/health
+```
 
 ---
 
@@ -161,42 +267,83 @@ Health check: `http://localhost:8080/actuator/health`.
 
 ```bash
 cd frontend
+```
 
-# install dependencies
+Install dependencies:
+
+```bash
 npm install
+```
 
-# copy and edit env vars
-cp .env.example .env
+Create and configure `.env`, then start the development server:
 
-# start the dev server
+```bash
 npm run dev
 ```
 
-The app will be available at **`http://localhost:5173`** (default Vite port).
+The frontend will normally be available at:
 
-To create a production build:
+```text
+http://localhost:5173
+```
+
+### Production build
 
 ```bash
 npm run build
-npm run preview
+```
+
+### Lint
+
+```bash
+npm run lint
+```
+
+---
+
+## 🧪 Testing
+
+### Backend
+
+From the `backend/` directory:
+
+```bash
+./mvnw test
+```
+
+### Frontend
+
+Run the configured frontend test command when available in the project setup.
+
+For production verification, also run:
+
+```bash
+npm run lint
+npm run build
 ```
 
 ---
 
 ## 📡 API Overview
 
-Base path: `/api/v1`. The `/auth/**` routes are public; **all other endpoints require** `Authorization: Bearer <accessToken>`.
+Base path:
+
+```text
+/api/v1
+```
+
+Authentication endpoints are public. Protected endpoints require authentication.
 
 | Method | Route | Description |
 |--------|-------|-------------|
-| `POST` | `/auth/register` | Create an account (auto-login: returns access + refresh tokens + profile) |
-| `POST` | `/auth/login` | Log in, receive access + refresh tokens + profile |
-| `POST` | `/auth/refresh` | Exchange a refresh token for a new access token |
-| `POST` | `/auth/logout` | Log out (client discards tokens; stateless — denylist planned) |
-| `GET` | `/users/me` | Get current profile |
+| `POST` | `/auth/register` | Create a new account |
+| `POST` | `/auth/login` | Authenticate a user |
+| `POST` | `/auth/refresh` | Refresh the access token |
+| `POST` | `/auth/logout` | Revoke the refresh token and clear the refresh cookie |
+| `GET` | `/users/me` | Get current user profile |
 | `PUT` | `/users/me` | Update profile |
 | `PATCH` | `/users/me/password` | Change password |
-| `GET` | `/tasks` | List tasks (filter/sort/search/paginate) |
+| `GET` | `/tasks` | List tasks with filtering, sorting, search, and pagination |
 | `POST` | `/tasks` | Create a task |
 | `GET` | `/tasks/{id}` | Get a task |
 | `PUT` | `/tasks/{id}` | Update a task |
@@ -206,30 +353,56 @@ Base path: `/api/v1`. The `/auth/**` routes are public; **all other endpoints re
 | `POST` | `/categories` | Create a category |
 | `PUT` | `/categories/{id}` | Update a category |
 | `DELETE` | `/categories/{id}` | Delete a category |
-| `GET` | `/dashboard/summary` | Headline task counts + completion rate |
-| `GET` | `/dashboard/status-distribution` | Task counts by status |
-| `GET` | `/dashboard/priority-distribution` | Task counts by priority |
-| `GET` | `/dashboard/recent-tasks` | Newest tasks for the user |
-| `GET` | `/dashboard/productivity` | Completion %, overdue %, active workload |
+| `GET` | `/dashboard/summary` | Get task summary and completion rate |
+| `GET` | `/dashboard/status-distribution` | Get task counts by status |
+| `GET` | `/dashboard/priority-distribution` | Get task counts by priority |
+| `GET` | `/dashboard/recent-tasks` | Get recent tasks |
+| `GET` | `/dashboard/productivity` | Get productivity information |
 
-📄 Full request/response details: [`docs/API_SPEC.md`](./docs/API_SPEC.md).
+📄 See the complete request/response documentation in [`docs/API_SPEC.md`](./docs/API_SPEC.md).
 
 ---
 
 ## ☁️ Deployment
 
-| Component | Platform | Notes |
-|-----------|----------|-------|
-| **Frontend** | [Vercel](https://vercel.com/) | Auto-deploys from `frontend/` on push; set `VITE_API_URL` in project settings. |
-| **Backend** | [Railway](https://railway.app/) | Builds the Spring Boot jar/Docker image from `backend/`; set all backend env vars. |
-| **Database** | [MongoDB Atlas](https://www.mongodb.com/atlas) | Managed cluster; restrict network access to Railway. |
+| Component | Platform | Configuration |
+|-----------|----------|---------------|
+| **Frontend** | Vercel | Root directory: `frontend/` |
+| **Backend** | Render | Docker deployment using `render.yaml` |
+| **Database** | MongoDB Atlas | Managed MongoDB cluster |
 
-**Deploy steps (summary):**
-1. Push to GitHub — CI runs tests on pull requests.
-2. Connect the repo to Vercel (root `frontend/`) and Railway (root `backend/`).
-3. Configure environment variables on each platform.
-4. Set `CORS_ALLOWED_ORIGINS` on the backend to your Vercel URL.
-5. Verify the API health check and the live frontend.
+### Frontend deployment
+
+The Vercel project uses:
+
+```text
+Root Directory: frontend
+```
+
+The frontend includes [`frontend/vercel.json`](./frontend/vercel.json) to support SPA deep linking. This allows routes such as `/login`, `/tasks`, and `/dashboard` to load correctly when accessed directly. Vercel documents this rewrite approach for Vite SPAs. citeturn0search0turn0search1
+
+### Backend deployment
+
+The Render deployment is defined in:
+
+```text
+render.yaml
+```
+
+Required production environment variables should be configured through the Render dashboard rather than committed to Git.
+
+### Deployment flow
+
+```text
+GitHub
+   │
+   ├── frontend changes ──► Vercel
+   │
+   └── backend changes ───► Render
+                              │
+                              ▼
+                         MongoDB Atlas
+```
 
 ---
 
@@ -240,52 +413,36 @@ Base path: `/api/v1`. The `/auth/**` routes are public; **all other endpoints re
 - [ ] Subtasks and checklists
 - [ ] Team workspaces with shared boards and roles
 - [ ] Calendar view integrating due dates
-- [ ] Productivity trends over time (charts, streaks)
-- [ ] Third-party integrations (Google Calendar, Slack)
+- [ ] Productivity trends over time
+- [ ] Third-party integrations
 - [ ] Admin dashboard UI
 - [ ] CSV / PDF export
 - [ ] Dark mode
 
-See [`docs/SRS.md`](./docs/SRS.md#10-future-features) for the full list.
-
----
-
-## 👤 Author
-
-**[Your Name]**
-
-- Portfolio: [your-portfolio.com](#)
-- GitHub: [@your-username](https://github.com/your-username)
-- LinkedIn: [your-linkedin](https://linkedin.com/in/your-username)
-
-> _Built as a full-stack portfolio project to demonstrate clean architecture, secure JWT authentication, and modern cloud deployment._
+See [`docs/SRS.md`](./docs/SRS.md) for the broader project requirements and future features.
 
 ---
 
 ## 🤝 Contributing
 
-Contributions, issues, and feature requests are welcome! Feel free to check the [issues page](../../issues).
+Contributions, issues, and feature requests are welcome.
 
-1. Fork the project
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+For development:
 
----
+1. Create a feature branch from `main`.
+2. Make your changes.
+3. Test and lint the affected module.
+4. Commit your changes with a clear message.
+5. Push the branch to GitHub.
+6. Open a Pull Request.
+7. Review and merge the PR after the required checks pass.
 
-## 📄 License
-
-Distributed under the **MIT License**. See [`LICENSE`](./LICENSE) for details.
-
-```
-MIT License — Copyright (c) 2026 [Your Name]
-```
+For the current team workflow, use the repository's issue and pull-request process to coordinate changes.
 
 ---
 
 <div align="center">
 
-⭐ If you find TaskFlow useful, consider giving it a star!
+⭐ If you find TaskFlow useful, consider giving the repository a star!
 
 </div>
