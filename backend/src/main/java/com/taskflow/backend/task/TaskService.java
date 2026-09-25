@@ -13,9 +13,15 @@ import com.taskflow.backend.task.dto.UpdateTaskStatusRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
+import java.util.List;
+import com.taskflow.backend.task.dto.BulkTaskAction;
+import com.taskflow.backend.task.dto.BulkTaskActionRequest;
+import com.taskflow.backend.task.dto.BulkTaskActionResponse;
 
 /**
  * Business logic for task management and the workflow lifecycle.
@@ -155,5 +161,49 @@ public class TaskService {
         } else if (current == TaskStatus.DONE) {
             task.setCompletedAt(null);
         }
+    }
+
+    /**
+     * Performs a bulk action on the specified tasks.
+     *
+     * <p>Task IDs that are not found or not owned by the current user are
+     * collected in the {@code notFound} list of the response rather than
+     * aborting the whole operation. Successfully acted-on tasks are saved and
+     * returned in {@code updated}.
+     *
+     * @param request the bulk-action payload
+     * @return a response containing updated tasks and any unresolvable IDs
+     * @throws ResponseStatusException {@code 400} when required action-specific
+     *                                 parameters are missing (e.g. no status for
+     *                                 {@code UPDATE_STATUS})
+     */
+    public BulkTaskActionResponse bulkAction(BulkTaskActionRequest request) {
+        String userId = SecurityUtils.currentUserId();
+
+        if (request.action() == BulkTaskAction.UPDATE_STATUS && request.status() == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "status is required for UPDATE_STATUS"
+            );
+        }
+
+        // Partition the requested IDs into found (owned by this user) and not-found.
+        List<Task> tasks = new java.util.ArrayList<>();
+        List<String> notFound = new java.util.ArrayList<>();
+
+        for (String id : request.taskIds()) {
+            taskRepository.findByIdAndUserId(id, userId)
+                    .ifPresentOrElse(tasks::add, () -> notFound.add(id));
+        }
+
+        if (request.action() == BulkTaskAction.UPDATE_STATUS) {
+            tasks.forEach(task -> applyStatusTransition(task, request.status()));
+        }
+
+        List<TaskResponse> updated = taskRepository.saveAll(tasks).stream()
+                .map(taskMapper::toResponse)
+                .toList();
+
+        return new BulkTaskActionResponse(updated, notFound);
     }
 }

@@ -3,6 +3,8 @@ package com.taskflow.backend.task;
 import com.taskflow.backend.common.PageResponse;
 import com.taskflow.backend.common.Priority;
 import com.taskflow.backend.common.TaskStatus;
+import com.taskflow.backend.task.dto.BulkTaskActionRequest;
+import com.taskflow.backend.task.dto.BulkTaskActionResponse;
 import com.taskflow.backend.task.dto.CreateTaskRequest;
 import com.taskflow.backend.task.dto.TaskResponse;
 import com.taskflow.backend.task.dto.UpdateTaskRequest;
@@ -65,6 +67,18 @@ public class TaskController {
         TaskSearchCriteria filters = new TaskSearchCriteria(
                 null, status, priority, categoryId, dueAfter, dueBefore, overdue, search);
         return ResponseEntity.ok(taskService.list(filters, pageable));
+    }
+
+    /**
+     * {@code POST /tasks/bulk-actions} — perform an action on multiple tasks in one
+     * request. Returns a {@link BulkTaskActionResponse} that separates successfully
+     * updated tasks from IDs that could not be resolved (not found or not owned).
+     */
+    @PostMapping("/bulk-actions")
+    public ResponseEntity<BulkTaskActionResponse> bulkAction(
+            @Valid @RequestBody BulkTaskActionRequest request) {
+
+        return ResponseEntity.ok(taskService.bulkAction(request));
     }
 
     /** {@code GET /tasks/{id}} — get one task. */
