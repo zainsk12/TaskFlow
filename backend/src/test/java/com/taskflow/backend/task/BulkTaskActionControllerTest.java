@@ -27,7 +27,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * Web-layer tests for {@code POST /api/v1/tasks/bulk-actions}.
  *
- * <p>{@link TaskService} is mocked; only the HTTP contract (routing, request
+ * <p>
+ * {@link TaskService} is mocked; only the HTTP contract (routing, request
  * validation, response shape, error mapping) is exercised here. Business-logic
  * behaviour is covered by {@link BulkTaskActionServiceTest}.
  */
@@ -42,6 +43,9 @@ class BulkTaskActionControllerTest {
 
     @MockitoBean
     private TaskService taskService;
+
+    @MockitoBean
+    private TaskCsvExportService taskCsvExportService;
 
     // Required by the filter beans auto-detected during @WebMvcTest slice
     @MockitoBean
@@ -65,14 +69,14 @@ class BulkTaskActionControllerTest {
         when(taskService.bulkAction(any())).thenReturn(serviceResponse);
 
         mockMvc.perform(post(URL)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                    "taskIds": ["task-1", "task-2"],
-                                    "action": "UPDATE_STATUS",
-                                    "status": "DONE"
-                                }
-                                """))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                            "taskIds": ["task-1", "task-2"],
+                            "action": "UPDATE_STATUS",
+                            "status": "DONE"
+                        }
+                        """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.updated").isArray())
                 .andExpect(jsonPath("$.updated.length()").value(2))
@@ -89,14 +93,14 @@ class BulkTaskActionControllerTest {
         when(taskService.bulkAction(any())).thenReturn(serviceResponse);
 
         mockMvc.perform(post(URL)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                    "taskIds": ["task-1", "bad-id"],
-                                    "action": "UPDATE_STATUS",
-                                    "status": "IN_PROGRESS"
-                                }
-                                """))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                            "taskIds": ["task-1", "bad-id"],
+                            "action": "UPDATE_STATUS",
+                            "status": "IN_PROGRESS"
+                        }
+                        """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.updated.length()").value(1))
                 .andExpect(jsonPath("$.updated[0].id").value("task-1"))
@@ -111,14 +115,14 @@ class BulkTaskActionControllerTest {
         when(taskService.bulkAction(any())).thenReturn(serviceResponse);
 
         mockMvc.perform(post(URL)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                    "taskIds": ["bad-1", "bad-2"],
-                                    "action": "UPDATE_STATUS",
-                                    "status": "DONE"
-                                }
-                                """))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                            "taskIds": ["bad-1", "bad-2"],
+                            "action": "UPDATE_STATUS",
+                            "status": "DONE"
+                        }
+                        """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.updated.length()").value(0))
                 .andExpect(jsonPath("$.notFound.length()").value(2));
@@ -131,68 +135,68 @@ class BulkTaskActionControllerTest {
     @Test
     void emptyTaskIdsListReturns400() throws Exception {
         mockMvc.perform(post(URL)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                    "taskIds": [],
-                                    "action": "UPDATE_STATUS",
-                                    "status": "DONE"
-                                }
-                                """))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                            "taskIds": [],
+                            "action": "UPDATE_STATUS",
+                            "status": "DONE"
+                        }
+                        """))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
     void missingTaskIdsFieldReturns400() throws Exception {
         mockMvc.perform(post(URL)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                    "action": "UPDATE_STATUS",
-                                    "status": "DONE"
-                                }
-                                """))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                            "action": "UPDATE_STATUS",
+                            "status": "DONE"
+                        }
+                        """))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
     void missingActionFieldReturns400() throws Exception {
         mockMvc.perform(post(URL)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                    "taskIds": ["task-1"],
-                                    "status": "DONE"
-                                }
-                                """))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                            "taskIds": ["task-1"],
+                            "status": "DONE"
+                        }
+                        """))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
     void unknownActionEnumValueReturns400() throws Exception {
         mockMvc.perform(post(URL)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                    "taskIds": ["task-1"],
-                                    "action": "INVALID_ACTION",
-                                    "status": "DONE"
-                                }
-                                """))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                            "taskIds": ["task-1"],
+                            "action": "INVALID_ACTION",
+                            "status": "DONE"
+                        }
+                        """))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
     void unknownStatusEnumValueReturns400() throws Exception {
         mockMvc.perform(post(URL)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                    "taskIds": ["task-1"],
-                                    "action": "UPDATE_STATUS",
-                                    "status": "NOT_A_VALID_STATUS"
-                                }
-                                """))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                            "taskIds": ["task-1"],
+                            "action": "UPDATE_STATUS",
+                            "status": "NOT_A_VALID_STATUS"
+                        }
+                        """))
                 .andExpect(status().isBadRequest());
     }
 
@@ -208,13 +212,13 @@ class BulkTaskActionControllerTest {
                         "status is required for UPDATE_STATUS"));
 
         mockMvc.perform(post(URL)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                    "taskIds": ["task-1"],
-                                    "action": "UPDATE_STATUS"
-                                }
-                                """))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                            "taskIds": ["task-1"],
+                            "action": "UPDATE_STATUS"
+                        }
+                        """))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("status is required for UPDATE_STATUS"));
     }
@@ -236,7 +240,6 @@ class BulkTaskActionControllerTest {
                 null,
                 false,
                 Instant.now().minusSeconds(300),
-                Instant.now()
-        );
+                Instant.now());
     }
 }
