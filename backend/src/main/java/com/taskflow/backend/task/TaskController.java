@@ -13,7 +13,9 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -31,7 +33,8 @@ import java.time.Instant;
 /**
  * REST controller for task resources ({@code /api/v1/tasks}).
  *
- * <p>Thin HTTP adapter: validates request DTOs, maps query parameters into a
+ * <p>
+ * Thin HTTP adapter: validates request DTOs, maps query parameters into a
  * {@link TaskSearchCriteria}, and delegates to {@link TaskService}. All routes
  * require authentication; the owning user is resolved server-side.
  * See {@code docs/API_SPEC.md} §4.
@@ -43,6 +46,8 @@ public class TaskController {
 
     private final TaskService taskService;
 
+    private final TaskCsvExportService taskCsvExportService;
+
     /** {@code POST /tasks} — create a task ({@code 201 Created}). */
     @PostMapping
     public ResponseEntity<TaskResponse> create(@Valid @RequestBody CreateTaskRequest request) {
@@ -51,7 +56,8 @@ public class TaskController {
 
     /**
      * {@code GET /tasks} — list the user's tasks with optional filters, plus
-     * pagination/sorting (e.g. {@code ?status=TODO&priority=HIGH&sort=dueDate,asc}).
+     * pagination/sorting (e.g.
+     * {@code ?status=TODO&priority=HIGH&sort=dueDate,asc}).
      */
     @GetMapping
     public ResponseEntity<PageResponse<TaskResponse>> list(
@@ -67,6 +73,32 @@ public class TaskController {
         TaskSearchCriteria filters = new TaskSearchCriteria(
                 null, status, priority, categoryId, dueAfter, dueBefore, overdue, search);
         return ResponseEntity.ok(taskService.list(filters, pageable));
+    }
+
+    /**
+     * {@code GET /tasks/export/csv} — export the user's tasks as CSV.
+     */
+    @GetMapping("/export/csv")
+    public ResponseEntity<byte[]> exportTasks(
+            @RequestParam(required = false) TaskStatus status,
+            @RequestParam(required = false) Priority priority,
+            @RequestParam(required = false) String categoryId,
+            @RequestParam(required = false) Instant dueAfter,
+            @RequestParam(required = false) Instant dueBefore,
+            @RequestParam(required = false) Boolean overdue,
+            @RequestParam(required = false) String search) {
+
+        TaskSearchCriteria criteria = new TaskSearchCriteria(
+                null, status, priority, categoryId, dueAfter, dueBefore, overdue, search);
+
+        byte[] csv = taskCsvExportService.exportTasks(criteria);
+
+        return ResponseEntity.ok()
+                .header(
+                        HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"taskflow-tasks.csv\"")
+                .contentType(MediaType.parseMediaType("text/csv"))
+                .body(csv);
     }
 
     /**
@@ -90,14 +122,14 @@ public class TaskController {
     /** {@code PUT /tasks/{id}} — update a task. */
     @PutMapping("/{id}")
     public ResponseEntity<TaskResponse> update(@PathVariable String id,
-                                               @Valid @RequestBody UpdateTaskRequest request) {
+            @Valid @RequestBody UpdateTaskRequest request) {
         return ResponseEntity.ok(taskService.update(id, request));
     }
 
     /** {@code PATCH /tasks/{id}/status} — update only the task status. */
     @PatchMapping("/{id}/status")
     public ResponseEntity<TaskResponse> updateStatus(@PathVariable String id,
-                                                     @Valid @RequestBody UpdateTaskStatusRequest request) {
+            @Valid @RequestBody UpdateTaskStatusRequest request) {
         return ResponseEntity.ok(taskService.updateStatus(id, request));
     }
 

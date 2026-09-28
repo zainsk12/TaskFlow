@@ -22,7 +22,8 @@ import java.util.regex.Pattern;
 /**
  * {@code MongoTemplate}-based implementation of {@link TaskRepositoryCustom}.
  *
- * <p>Builds an {@code AND} of only the supplied filters (all anchored on
+ * <p>
+ * Builds an {@code AND} of only the supplied filters (all anchored on
  * {@code userId}), counts the total, then fetches the requested page with its
  * sort applied.
  */
@@ -33,6 +34,29 @@ public class TaskRepositoryImpl implements TaskRepositoryCustom {
 
     @Override
     public Page<Task> search(TaskSearchCriteria c, Pageable pageable) {
+        List<Criteria> filters = buildFilters(c);
+
+        Criteria criteria = new Criteria().andOperator(filters.toArray(new Criteria[0]));
+        Query query = new Query(criteria);
+
+        long total = mongoTemplate.count(query, Task.class);
+        query.with(pageable);
+        List<Task> tasks = mongoTemplate.find(query, Task.class);
+
+        return PageableExecutionUtils.getPage(tasks, pageable, () -> total);
+    }
+
+    @Override
+    public List<Task> searchAll(TaskSearchCriteria c) {
+        List<Criteria> filters = buildFilters(c);
+
+        Criteria criteria = new Criteria().andOperator(filters.toArray(new Criteria[0]));
+        Query query = new Query(criteria);
+
+        return mongoTemplate.find(query, Task.class);
+    }
+
+    private List<Criteria> buildFilters(TaskSearchCriteria c) {
         List<Criteria> filters = new ArrayList<>();
         filters.add(Criteria.where("userId").is(c.userId()));
 
@@ -63,18 +87,10 @@ public class TaskRepositoryImpl implements TaskRepositoryCustom {
             String regex = Pattern.quote(c.search().trim());
             filters.add(new Criteria().orOperator(
                     Criteria.where("title").regex(regex, "i"),
-                    Criteria.where("description").regex(regex, "i")
-            ));
+                    Criteria.where("description").regex(regex, "i")));
         }
 
-        Criteria criteria = new Criteria().andOperator(filters.toArray(new Criteria[0]));
-        Query query = new Query(criteria);
-
-        long total = mongoTemplate.count(query, Task.class);
-        query.with(pageable);
-        List<Task> tasks = mongoTemplate.find(query, Task.class);
-
-        return PageableExecutionUtils.getPage(tasks, pageable, () -> total);
+        return filters;
     }
 
     @Override
@@ -87,14 +103,14 @@ public class TaskRepositoryImpl implements TaskRepositoryCustom {
         return countGroupedBy(userId, "priority");
     }
 
-    /** {@code $match userId} then {@code $group} by the given field with a count. */
+    /**
+     * {@code $match userId} then {@code $group} by the given field with a count.
+     */
     private Map<String, Long> countGroupedBy(String userId, String field) {
         Aggregation aggregation = Aggregation.newAggregation(
                 Aggregation.match(Criteria.where("userId").is(userId)),
-                Aggregation.group(field).count().as("count")
-        );
-        AggregationResults<Document> results =
-                mongoTemplate.aggregate(aggregation, Task.class, Document.class);
+                Aggregation.group(field).count().as("count"));
+        AggregationResults<Document> results = mongoTemplate.aggregate(aggregation, Task.class, Document.class);
 
         Map<String, Long> counts = new LinkedHashMap<>();
         for (Document doc : results.getMappedResults()) {

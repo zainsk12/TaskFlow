@@ -3,6 +3,7 @@ package com.taskflow.backend.task;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -13,6 +14,9 @@ public interface TaskRepositoryCustom {
 
     /** Returns a page of the user's tasks matching the (optional) criteria. */
     Page<Task> search(TaskSearchCriteria criteria, Pageable pageable);
+
+    /** Returns all of the user's tasks matching the (optional) criteria. */
+    List<Task> searchAll(TaskSearchCriteria criteria);
 
     /**
      * Counts the user's tasks grouped by status, via a {@code $match} + {@code $group}
